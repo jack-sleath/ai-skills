@@ -45,17 +45,26 @@ Pull the latest changes — symlinks mean no reinstall needed:
 git pull
 ```
 
-## Adding a skill
+## Adding a Claude skill
 
 Create a `.md` file in `commands/`. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code/slash-commands) for the skill format, then re-run the install script to link it.
 
 Remember to update the **Skills** table in this README with the new skill's command and description.
 
+## Adding a PowerShell command
+
+Create a `.ps1` file in `ps-commands/`. Each file should define one function with the same name as the file (e.g. `ps-commands/greet.ps1` defines `function greet { ... }`).
+
+The install script adds a profile loader that auto-sources all `.ps1` files in `ps-commands/` on shell start — so after a `git pull` your new commands are available immediately without reinstalling.
+
+On Linux/macOS, add `.sh` files to `ps-commands/` instead — they are sourced the same way via `~/.bashrc` / `~/.zshrc`.
+
 ## Structure
 
 ```
 ai-skills/
-  commands/       # skill .md files
+  commands/       # Claude Code skill .md files
+  ps-commands/    # PowerShell / shell function .ps1 / .sh files
   install.ps1     # Windows installer
   install.sh      # Linux/macOS installer
 ```

@@ -1,35 +1,73 @@
-# Install AI Skills for Claude Code
-# Creates symlinks from ~/.claude/commands/ to this repo's commands/
+# Install AI Skills
+# 1. Creates symlinks from ~/.claude/commands/ to this repo's commands/
+# 2. Adds a PowerShell profile loader for ps-commands/
 # Requires: Developer Mode enabled, or run as Administrator
 
+param(
+    [switch]$ProfileOnly,
+    [switch]$SymlinksOnly
+)
+
 $repoRoot = $PSScriptRoot
+
+# ── Claude Code skills ──────────────────────────────────────────────────────
 $commandsSource = Join-Path $repoRoot "commands"
 $commandsDest = Join-Path $HOME ".claude\commands"
 
-# Create destination if it doesn't exist
-if (-not (Test-Path $commandsDest)) {
+if (-not $ProfileOnly -and -not (Test-Path $commandsDest)) {
     New-Item -ItemType Directory -Path $commandsDest -Force | Out-Null
     Write-Host "Created $commandsDest"
 }
 
-# Symlink each .md file
-$skills = Get-ChildItem -Path $commandsSource -Filter "*.md"
+$skills = if (-not $ProfileOnly) { Get-ChildItem -Path $commandsSource -Filter "*.md" } else { @() }
 
-if ($skills.Count -eq 0) {
-    Write-Host "No skills found in $commandsSource"
-    exit 0
-}
+if (-not $ProfileOnly -and $skills.Count -eq 0) {
+    Write-Host "No Claude skills found in $commandsSource"
+} elseif (-not $ProfileOnly) {
+    foreach ($skill in $skills) {
+        $linkPath = Join-Path $commandsDest $skill.Name
+        $targetPath = $skill.FullName
 
-foreach ($skill in $skills) {
-    $linkPath = Join-Path $commandsDest $skill.Name
-    $targetPath = $skill.FullName
+        if (Test-Path $linkPath) {
+            Remove-Item $linkPath -Force
+        }
 
-    if (Test-Path $linkPath) {
-        Remove-Item $linkPath -Force
+        New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath | Out-Null
+        Write-Host "Linked (Claude): $($skill.Name)"
     }
-
-    New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath | Out-Null
-    Write-Host "Linked: $($skill.Name)"
+    Write-Host "Done. $($skills.Count) Claude skill(s) installed."
 }
 
-Write-Host "`nDone. $($skills.Count) skill(s) installed."
+# ── PowerShell commands ─────────────────────────────────────────────────────
+if (-not $SymlinksOnly) {
+$psCommandsSource = Join-Path $repoRoot "ps-commands"
+
+$loaderBlock = @"
+
+# AI Skills - PowerShell commands loader (added by install.ps1)
+# Source: $psCommandsSource
+Get-ChildItem -Path '$psCommandsSource' -Filter '*.ps1' -ErrorAction SilentlyContinue |
+    ForEach-Object { . `$_.FullName }
+"@
+
+$marker = "AI Skills - PowerShell commands loader"
+
+if (-not (Test-Path $PROFILE)) {
+    New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+    Write-Host "Created PowerShell profile at $PROFILE"
+}
+
+$profileContent = ""
+if (Test-Path $PROFILE) {
+    $profileContent = [System.IO.File]::ReadAllText($PROFILE)
+}
+
+if ($profileContent.Contains($marker)) {
+    Write-Host "PowerShell loader already present in $PROFILE"
+} else {
+    Add-Content -Path $PROFILE -Value $loaderBlock -Encoding UTF8
+    Write-Host "Added PowerShell loader to $PROFILE"
+}
+
+Write-Host "`nAll done. Restart PowerShell (or run '. `$PROFILE') to load ps-commands."
+}
