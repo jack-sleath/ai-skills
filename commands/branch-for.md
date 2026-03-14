@@ -15,6 +15,9 @@ Arguments: $ARGUMENTS
 6. Create the new branch off the target base: `git checkout -b <new-branch> origin/<target-base-branch>`.
 7. Push the new branch and set upstream tracking: `git push -u origin <new-branch>`.
 8. Merge the original feature branch from origin into it: `git merge origin/<current-branch> --no-edit`.
-   - If there are merge conflicts, list the conflicting files and stop. Tell the user to resolve the conflicts, then run `git merge --continue` and `git push`.
+   - If there are merge conflicts, list the conflicting files and stop. Tell the user to resolve the conflicts, then run `git merge --continue`, `git push`, and create the PR manually.
    - If the merge succeeds, push the result: `git push`.
-9. Report the new branch name and confirm it is tracking `origin/<new-branch>`.
+9. Create a pull request using `gh pr create` targeting the base branch (`<target-base-branch>`), with:
+   - Title: the new branch name
+   - Body summarising what feature branch was merged and the date
+10. Output the PR URL and confirm the new branch is tracking `origin/<new-branch>`.
