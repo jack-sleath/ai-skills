@@ -1,3 +1,4 @@
 function danger-claude {
-    claude --dangerously-skip-permissions "Ready?"
+    Start-Process powershell -ArgumentList '-NoExit', '-Command', 'claude --dangerously-skip-permissions "Ready?"'
+    Start-Process powershell -ArgumentList '-NoExit', '-Command', 'claude --dangerously-skip-permissions "/usage"'
 }

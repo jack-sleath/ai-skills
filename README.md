@@ -21,7 +21,6 @@ A portable collection of custom Claude Code skills, installable across multiple 
 ## Setup
 
 ### Windows
-> Requires Developer Mode enabled (Settings → System → For developers) or run as Administrator.
 
 ```powershell
 git clone <repo-url>
@@ -40,7 +39,7 @@ chmod +x install.sh
 
 ## Updating
 
-Pull the latest changes — symlinks mean no reinstall needed:
+Run the installer again after pulling, or just double-click `install-admin.bat` which does both:
 
 ```bash
 git pull
