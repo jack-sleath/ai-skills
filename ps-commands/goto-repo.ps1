@@ -6,7 +6,16 @@ function goto-repo {
         return
     }
 
-    $folders = Get-Content $listFile | Where-Object { $_ -ne "" } | Sort-Object
+    $allFolders = Get-Content $listFile | Where-Object { $_ -ne "" } | Sort-Object
+    $folders = $allFolders | Where-Object { Test-Path $_ }
+
+    $removed = $allFolders | Where-Object { -not (Test-Path $_) }
+    if ($removed.Count -gt 0) {
+        $folders | Set-Content $listFile
+        foreach ($r in $removed) {
+            Write-Host "Removed missing path: $r"
+        }
+    }
 
     if ($folders.Count -eq 0) {
         Write-Host "No repos saved yet. Use add-repo-folder to add one."
@@ -32,11 +41,6 @@ function goto-repo {
     }
 
     $target = $folders[$index]
-
-    if (-not (Test-Path $target)) {
-        Write-Host "Folder no longer exists: $target"
-        return
-    }
 
     Set-Location $target
     Write-Host "-> $target"
