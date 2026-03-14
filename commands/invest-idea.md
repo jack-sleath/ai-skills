@@ -162,6 +162,35 @@ Structure:
 
 ---
 
+After creating both files, move to Phase 3b before generating the milestones.
+
+---
+
+## Phase 3b — Fill In Human Sections of FEATURE.md
+
+The FEATURE.md has placeholder sections that require human input. Ask the user to fill these in **one question at a time**, in order. Do not ask about a field if its answer is already clear from the information gathered in Phases 1 and 2.
+
+Ask about these fields (skip any already answered):
+1. **Written by (Hypothesis):** Who wrote the hypothesis? (name or role)
+2. **Written by (Requirements Specification):** Who is the PM writing the requirements spec?
+3. **Approved by (Requirements Specification):** Who is the stakeholder approving the requirements?
+4. **KPIs:** What metrics will measure success?
+5. **Existing Functionality:** What existing functionality does this replace or build on, if any?
+6. **Written by (Functional Specification):** Which developer(s) will write the functional spec?
+7. **Approved by (Functional Specification):** Who approves the functional spec (stakeholder and PM/Head of Development)?
+8. **Definition of Done:** What will signify this work is complete, as agreed by all developers?
+9. **Risks:** What are the key risks?
+10. **Written by (Test Requirements):** Who writes the test requirements?
+11. **Approved by (Test Requirements):** Who approves the test requirements?
+12. **Tested by:** Who will perform testing?
+13. **Test Requirements:** List the specific things that need to be tested to confirm success.
+
+Ask **one question at a time**. After all answers are collected, update FEATURE.md with the provided values, replacing the placeholder text.
+
+Once FEATURE.md is complete, move to File 3.
+
+---
+
 ### File 3: `MILESTONES.md`
 
 Structure:
