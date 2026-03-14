@@ -20,8 +20,13 @@ From the files, extract:
 | Requirements Specification body | Functional Requirements + Non-Functional Requirements |
 | Functional Specification body | All milestones summarised as a development plan |
 | Definition of Done | "Done when" criteria from the final milestone(s) |
-| Test Requirements checklist | "Done when" criteria from all milestones, formatted as checkboxes |
 | Out of Scope (Risks) | Out of Scope section, if present |
+
+Also derive these two fields as best you can from the source files:
+
+**KPIs** — infer measurable success metrics from the Functional Requirements and Non-Functional Requirements. For example: if the spec mentions response times, uptime, user actions, or conversion goals, turn those into KPI statements. If nothing can be inferred, note that they could not be derived.
+
+**Test Requirements** — compile every "Done when" criterion from all milestones into a checklist. Supplement with any testable Functional Requirements from ACCEPTANCE_CRITERIA.md that are not already covered.
 
 Do not invent content not present in the source files. Where something is clearly not covered, leave a placeholder.
 
@@ -31,10 +36,12 @@ Do not invent content not present in the source files. Where something is clearl
 
 Ask the user for information that cannot be derived from the files, **one question at a time**, in order. Skip any question whose answer is already clear from context.
 
+For **KPIs** and **Test Requirements**, show the user what you derived in Step 2 before asking, then ask if they are happy with it or want to add/change anything. Only replace the derived content if the user provides new content — otherwise keep what was derived.
+
 1. **Written by (Hypothesis):** Who wrote the hypothesis? (name or role)
 2. **Written by (Requirements Specification):** Who is the PM?
 3. **Approved by (Requirements Specification):** Who is the approving stakeholder?
-4. **KPIs:** What metrics will measure success?
+4. **KPIs:** Show the derived KPIs and ask: "Are you happy with these KPIs, or would you like to add or change anything?"
 5. **Existing Functionality:** What does this replace or build on, if anything?
 6. **Written by (Functional Specification):** Which developer(s) will write the functional spec?
 7. **Approved by (Functional Specification):** Who approves it (stakeholder and PM/Head of Development)?
@@ -42,6 +49,7 @@ Ask the user for information that cannot be derived from the files, **one questi
 9. **Written by (Test Requirements):** Who writes the test requirements?
 10. **Approved by (Test Requirements):** Who approves them?
 11. **Tested by:** Who will perform testing?
+12. **Test Requirements:** Show the derived test requirements checklist and ask: "Are you happy with these test requirements, or would you like to add or change anything?"
 
 ---
 
@@ -85,7 +93,7 @@ Create `FEATURE.md` in the project root using the structure below, filled with e
 
 ## KPIs
 
-- [answer 4]
+[Derived KPIs, updated with any user input from answer 4]
 
 ## Existing Functionality
 
@@ -123,7 +131,7 @@ Create `FEATURE.md` in the project root using the structure below, filled with e
 >
 > Tested by: [answer 11]
 
-[Done when criteria from all milestones as checkboxes]
+[Derived test requirements checklist, updated with any user input from answer 12]
 
 ## Test Results
 
