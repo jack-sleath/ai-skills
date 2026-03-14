@@ -5,14 +5,15 @@
 
 param(
     [switch]$ProfileOnly,
-    [switch]$SymlinksOnly
+    [switch]$SymlinksOnly,
+    [string]$UserHome = $HOME
 )
 
 $repoRoot = $PSScriptRoot
 
 # ── Claude Code skills ──────────────────────────────────────────────────────
 $commandsSource = Join-Path $repoRoot "commands"
-$commandsDest = Join-Path $HOME ".claude\commands"
+$commandsDest = Join-Path $UserHome ".claude\commands"
 
 if (-not $ProfileOnly -and -not (Test-Path $commandsDest)) {
     New-Item -ItemType Directory -Path $commandsDest -Force | Out-Null
