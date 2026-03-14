@@ -72,7 +72,97 @@ Quality attributes: performance, security, accessibility, offline support, etc. 
 Anything explicitly excluded or deferred.
 ```
 
-### File 2: `MILESTONES.md`
+### File 2: `FEATURE.md`
+
+Use the title of the idea as the document title. Fill in as much as possible from the gathered information; leave placeholder text for anything that requires human input (e.g. stakeholder names, KPIs, designs).
+
+Structure:
+```
+# [Title here]
+
+
+# Hypothesis
+
+> 👥 Written by:
+
+## 🧑‍💼 As a:
+
+[Enter main user persona]
+
+## 🎯 I want:
+
+[High level need]
+
+## 💡 So that:
+
+[Why?]
+
+## ✨ Context
+
+[Background context]
+
+---
+
+# Requirements Specification
+
+> 👥 Written by: [PM]
+>
+> Approved by: [Stakeholder]
+
+[Detailed high-level requirements]
+
+## KPIs
+
+- [What are we measuring]
+
+## Existing Functionality
+
+[What existing functionality is there? What are we replacing?]
+
+---
+
+# Functional Specification
+
+> 👥 Specification
+>
+> Written by: [Developer/s] *(Scrum says this can be any software or product developer AND can in theory be written during sprint planning)*
+>
+> Approved by: [Stakeholder and PM/Head of Development]
+
+[Detailed specification]
+
+[Add designs when available]
+
+## Definition of Done
+
+[What will signify this piece of work being complete - agreed by all Developers]
+
+---
+
+# Risks
+
+- [What risks might there be?]
+
+---
+
+# Test Requirements
+
+> 👥 Written by: [PM with Developer and Stakeholder input]
+>
+> Approved by: [Stakeholder/Head of Development]
+>
+> Tested by: [Developer PM Stakeholder]
+
+- [ ] What do we need to test to confirm success.
+
+## Test Results
+
+> [To be completed after testing phase. Include pass/fail status for each of the above requirements.]
+```
+
+---
+
+### File 3: `MILESTONES.md`
 
 Structure:
 ```
@@ -111,4 +201,4 @@ Structure:
 
 ---
 
-After creating both files, summarise what was produced and suggest the user run `/milestone` to begin implementation.
+After creating all three files, summarise what was produced and suggest the user run `/milestone` to begin implementation.

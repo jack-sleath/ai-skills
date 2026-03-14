@@ -1,6 +1,14 @@
 Analyse this project's git history to estimate how much time has been spent on it.
 
-Run: git log --format="%ai %ae %an %s" --all
+Arguments (optional): $ARGUMENTS
+- If a single date is provided (e.g. `2026-03-01`), only include commits on or after that date.
+- If two dates are provided (e.g. `2026-03-01 2026-03-14`), only include commits within that range (inclusive).
+- If no arguments are provided, include all commits.
+
+Build the git log command accordingly:
+- No args: `git log --format="%ai %ae %an %s" --all`
+- Start date only: `git log --format="%ai %ae %an %s" --all --after="START_DATE"`
+- Start and end date: `git log --format="%ai %ae %an %s" --all --after="START_DATE" --before="END_DATE"`
 
 Then:
 1. Group commits into work sessions — treat commits within ~2 hours of each other as one session
