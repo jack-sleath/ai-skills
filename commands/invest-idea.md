@@ -230,4 +230,6 @@ Structure:
 
 ---
 
-After creating all three files, summarise what was produced and suggest the user run `/milestone` to begin implementation.
+After creating all three files, summarise what was produced and suggest the user run:
+- `/milestone` to begin implementation
+- `/stories` to generate story cards for each milestone
