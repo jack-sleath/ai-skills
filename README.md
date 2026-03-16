@@ -13,6 +13,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Story | `/story` | Generates a single Gherkin story card (title, technical notes, acceptance criteria) from a given specification |
 | Commit | `/commit` | Reviews current changes and creates a well-crafted local git commit |
 | Branch For | `/branch-for <base-branch>` | Creates a dated staging branch off a target base, merges the current feature branch in, and opens a PR |
+| Select Branch | `/select-branch [prompt]` | Interactively picks a remote branch using fzf (or a numbered list fallback) and returns the selection |
 | Branch UAT | `/branch-uat` | Shortcut for `/branch-for UAT/main` — creates a `UAT/XXXXX-YYYY-MM-DD` branch and PR |
 | Branch Develop | `/branch-develop` | Shortcut for `/branch-for develop` — creates a `develop-XXXXX-YYYY-MM-DD` branch and PR |
 | Estimate Time | `/estimate-time [period]` | Analyses git history to estimate time spent. Accepts a date range, single date, or relative period (e.g. `3 months`, `30 days`) |

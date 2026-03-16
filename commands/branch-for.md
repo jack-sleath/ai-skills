@@ -7,14 +7,7 @@ Arguments: $ARGUMENTS
 
 1. Run `git branch --show-current` to get the current branch name.
 2. Extract the ticket identifier from the current branch name — assume the branch name is `<prefix>/<IDENTIFIER>` and the identifier is everything after the first `/`. If the branch doesn't follow this pattern, stop and tell the user.
-3. If no base branch was provided in $ARGUMENTS:
-   - Fetch the latest from origin: `git fetch origin`.
-   - List all remote branches: `git branch -r | sed 's|origin/||' | sed 's|^[[:space:]]*||' | grep -v 'HEAD'`
-   - Check if `fzf` is available: `command -v fzf`
-   - If `fzf` is available, pipe the branch list into it for interactive fuzzy filtering:
-     `git branch -r | sed 's|origin/||' | sed 's|^[[:space:]]*||' | grep -v 'HEAD' | fzf --prompt="Select base branch: "`
-   - If `fzf` is not available, print the numbered list of branches and ask the user to type the name of the branch they want to use.
-   - Use the selected branch as the target base branch for all remaining steps.
+3. If no base branch was provided in $ARGUMENTS, run `/select-branch "Select base branch"` and use the returned branch name as the target base branch for all remaining steps.
 4. Get today's date in `YYYY-MM-DD` format.
 4. Build the new branch name:
    - If the target base branch contains a `/` (e.g. `UAT/main`), extract the part before the `/` and use it as the folder prefix: `UAT/ABC-123-YYYY-MM-DD`.
