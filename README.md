@@ -19,6 +19,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Ship | `/ship` | Implements all incomplete milestones in sequence — after each one, raises a PR to main and immediately starts the next |
 | Feedback | `/feedback` | Translates feedback or a change request into a plan — appends to `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md`, and creates a `<CHANGE-TITLE>_FEATURE.md` |
 | Merge From | `/merge-from <branch>` | Fetches a branch from origin and merges it into the current active branch |
+| Audit | `/audit` | Reverse-engineers `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md` (Milestone 0) from an existing project's Swagger definitions, unit tests, and optional Gherkin — one set of files per VS project if a solution is present |
 
 ## Setup
 
