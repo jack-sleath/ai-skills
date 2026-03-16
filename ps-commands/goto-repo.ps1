@@ -6,8 +6,8 @@ function goto-repo {
         return
     }
 
-    $allFolders = Get-Content $listFile | Where-Object { $_ -ne "" } | Sort-Object
-    $folders = $allFolders | Where-Object { Test-Path $_ }
+    $allFolders = Get-Content $listFile | Where-Object { $_ -ne "" }
+    $folders = $allFolders | Where-Object { Test-Path $_ } | Sort-Object { Split-Path $_ -Leaf }
 
     $removed = $allFolders | Where-Object { -not (Test-Path $_) }
     if ($removed.Count -gt 0) {
