@@ -10,55 +10,9 @@ Read `MILESTONES.md` from the project root. If it is missing, tell the user and 
 
 ## Step 2 — Generate a story card per milestone
 
-For each milestone in the file, apply the following story card format. Treat the milestone's name, goal, tasks, and "Done when" criteria as the specification.
+For each milestone, treat its name, goal, tasks, and "Done when" criteria as the specification input and generate a story card using the same format, structure, and rules as the `/story` skill.
 
-Produce exactly this structure for each milestone:
-
-```
----
-
-Title: <short descriptive title based on the milestone name>
-
-<details>
-<summary>Original Spec</summary>
-
-**Goal:** <milestone goal>
-
-**Tasks:**
-<task list>
-
-**Done when:**
-<done when criteria>
-
-</details>
-
-
-Technical Notes:
-<implementation details inferred from the milestone — note any backend-only behaviour, infrastructure steps, or scaffolding. Write "None" if not applicable>
-
-
-**GIVEN** ...
-**WHEN** ...
-**AND** ...
-**THEN** ...
-
-**GIVEN** ...
-**WHEN** ...
-**AND** ...
-**THEN** ...
-```
-
----
-
-## Rules
-
-- Write acceptance criteria from the end-user perspective where possible. For infrastructure or backend-only milestones, state this clearly in Technical Notes and write criteria from a developer/operator perspective instead.
-- Use **BOLD CAPITALISED** GIVEN / WHEN / AND / THEN
-- Cover both positive and negative paths for each milestone
-- Do not invent requirements beyond what the milestone specifies
-- Keep language precise, explicit, and testable
-- If anything is unclear, undefined, or assumed — mark it **BOLD CAPITALISED** and flag for **MANUAL REVIEW**
-- Separate each milestone's story card with a horizontal rule (`---`)
+Separate each milestone's story card with a horizontal rule (`---`).
 
 ---
 
