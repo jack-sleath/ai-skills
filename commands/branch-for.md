@@ -15,7 +15,7 @@ Arguments: $ARGUMENTS
 5. If a base branch was provided in $ARGUMENTS (skipping step 3), fetch the latest from origin: `git fetch origin`.
 6. Create the new branch off the target base: `git checkout -b <new-branch> origin/<target-base-branch>`.
 7. Push the new branch and set upstream tracking: `git push -u origin <new-branch>`.
-8. Merge the original feature branch from origin into it: `git merge origin/<current-branch> --no-edit`.
+8. Merge the original feature branch into the new staging branch by running `/merge-from <current-branch>`.
    - If there are merge conflicts, list the conflicting files and stop. Tell the user to resolve the conflicts, then run `git merge --continue`, `git push`, and create the PR manually.
    - If the merge succeeds, push the result: `git push`.
 9. Create a pull request using `gh pr create` targeting the base branch (`<target-base-branch>`), with:
