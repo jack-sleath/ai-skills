@@ -44,7 +44,9 @@ function goto-repo {
 
         # Move cursor up to overwrite previous render
         if ($lineCount -gt 0) {
-            [Console]::SetCursorPosition(0, [Console]::CursorTop - $lineCount)
+            $newTop = [Console]::CursorTop - $lineCount
+            if ($newTop -lt 0) { $newTop = 0 }
+            [Console]::SetCursorPosition(0, $newTop)
         }
 
         $lines = 0
