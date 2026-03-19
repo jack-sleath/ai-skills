@@ -75,10 +75,13 @@ function goto-repo {
         }
 
         # Clear any leftover lines from previous longer list
-        $blank = " " * [Console]::WindowWidth
-        for ($j = $filteredIndices.Count; $j -lt $names.Count; $j++) {
-            Write-Host $blank
-            $lines++
+        $extraLines = $lineCount - $lines
+        if ($extraLines -gt 0) {
+            $blank = " " * [Console]::WindowWidth
+            for ($j = 0; $j -lt $extraLines; $j++) {
+                Write-Host $blank
+                $lines++
+            }
         }
 
         return $lines
