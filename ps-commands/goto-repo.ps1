@@ -75,7 +75,8 @@ function goto-repo {
         }
 
         # Clear everything below the current content
-        Write-Host "`e[J" -NoNewline
+        $esc = [char]27
+        Write-Host "$esc[J" -NoNewline
 
         return $lines
     }
