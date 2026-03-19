@@ -74,15 +74,8 @@ function goto-repo {
             $lines++
         }
 
-        # Clear any leftover lines from previous longer list
-        $extraLines = $lineCount - $lines
-        if ($extraLines -gt 0) {
-            $blank = " " * [Console]::WindowWidth
-            for ($j = 0; $j -lt $extraLines; $j++) {
-                Write-Host $blank
-                $lines++
-            }
-        }
+        # Clear everything below the current content
+        Write-Host "`e[J" -NoNewline
 
         return $lines
     }
