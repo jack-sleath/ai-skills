@@ -46,4 +46,6 @@ Utility
 ───────
 /select-branch   (used by branch-for and merge-from)
 /estimate-time   (standalone)
+/browser-task    (standalone — generates prompt for Claude web extension)
+/to-browser      (uses same output format as → /browser-task)
 ```
