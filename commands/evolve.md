@@ -63,6 +63,32 @@ After the loop completes:
 
 ---
 
+## Step 5b — Cost estimate
+
+After showing the results table, display a **Cost Estimate** box summarising the total resource usage:
+
+1. **API tokens** — sum the `total_tokens` from every iteration's result JSON (the `combined` and `evolution` usage fields). This is exact.
+2. **Estimated session tokens** — estimate the Claude Code session overhead (this skill's own orchestration) at roughly **2,000 tokens per iteration** (reading files, asking questions, displaying output). This is approximate.
+3. **Grand total** — API tokens + estimated session tokens.
+4. **Approximate cost** — calculate using these per-token rates (input ≈ $3/M tokens, output ≈ $15/M tokens for Sonnet; input ≈ $15/M, output ≈ $75/M for Opus). If the exact split is unknown, use the blended rate of $8/M tokens for Sonnet or $40/M tokens for Opus.
+
+Display it like this:
+
+```
+┌─ Cost Estimate ──────────────────────────────┐
+│ API tokens (exact):       45,230             │
+│ Session overhead (est.):  ~6,000             │
+│ Grand total:              ~51,230 tokens     │
+│ Estimated API cost:       ~$0.36 (sonnet)    │
+│ Note: Session overhead is a rough estimate.  │
+│ Use /cost for precise API-user billing.      │
+└──────────────────────────────────────────────┘
+```
+
+This gives the user a ballpark sense of what each evolve run costs in tokens and dollars.
+
+---
+
 ## Step 6 — Confirm or revert
 
 Ask the user:
