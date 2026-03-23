@@ -29,19 +29,36 @@ Summarise what you found — the user should confirm this context is correct bef
 
 ## Phase 3 — Generate the Prompt
 
-Output a single fenced code block (```markdown ... ```) containing the full prompt the user should paste into the Claude web extension. The prompt must follow this structure:
+Output a single fenced code block (```markdown ... ```) containing the full prompt the user should paste into the Claude web extension.
+
+**Optimisation rules** — apply these when writing the steps:
+
+1. **Navigate directly.** Use full URLs instead of "go to the homepage, then click X, then click Y".
+2. **Be specific about targets.** Name the exact element, label, heading, or page region to look at — never "scan the page" or "look around for".
+3. **Batch same-page checks.** If multiple things need verifying on one page, combine them into a single step so the page is only read once.
+4. **Minimise page transitions.** Order steps so all work on Page A is done before moving to Page B. Never bounce between pages.
+5. **Provide expected values.** Give the exact strings, numbers, or patterns the browser should match against so it can do a targeted comparison instead of interpreting the full page content.
+6. **Skip redundant reads.** Never ask the browser to re-read or re-screenshot a page it has already captured unless the page state has changed.
+
+The prompt must follow this structure:
 
 ```markdown
 # Browser Task
 
 ## What to Do
-<Clear, step-by-step instructions for what the browser Claude should do>
+<Clear, step-by-step instructions for what the browser Claude should do.
+ Each step should specify EXACTLY what to look for and where — e.g. a selector, label text, or page region — so the browser can target reads narrowly rather than scanning the full page.
+ Prefer direct URL navigation over clicking through menus.
+ Combine checks that are on the same page into a single step.
+ Order steps to minimise back-and-forth navigation between pages.>
 
 ## Context
-<Relevant context gathered from the local project — test results, acceptance criteria, expected values, etc.>
+<Relevant context gathered from the local project — test results, acceptance criteria, expected values, etc.
+ Include exact expected values, strings, or patterns so the browser can do targeted comparisons instead of reading and interpreting large blocks of content.>
 
 ## Success Criteria
-<How to know the task is complete — what to verify, what values to check, what screenshots to take>
+<How to know the task is complete — what to verify, what values to check, what screenshots to take.
+ Express each criterion as a concrete, checkable condition (e.g. "element with text 'Deployed' is visible in the #status banner") rather than a vague description.>
 
 ## Output
 
