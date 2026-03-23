@@ -9,8 +9,8 @@ Review the current changes and create a local git commit with a well-crafted mes
    - If a skill file was **added, removed, or changed in a way that affects how skills delegate to or depend on each other**, verify `SKILL-GRAPH.md` has been updated to reflect the change. If not, update it before proceeding.
 4. Analyse the changes and draft a commit message:
    - First line: short imperative summary (max 72 chars), e.g. "Add retry logic to API client"
-   - If the change warrants it, add a blank line then a short body (2–4 lines) explaining *why*, not just what
-   - Do not include filler like "various improvements" or "minor changes" — be specific
+   - If the change warrants it, add a blank line then a short body (2â€“4 lines) explaining *why*, not just what
+   - Do not include filler like "various improvements" or "minor changes" â€” be specific
 5. Stage all modified tracked files with `git add -u`, unless the user specified particular files.
 6. Commit locally using the drafted message. Pass the message via heredoc to preserve formatting:
    ```
@@ -28,3 +28,4 @@ Review the current changes and create a local git commit with a well-crafted mes
 - Never use `--no-verify`.
 - Never commit files that look like secrets (`.env`, credential files, private keys).
 - If nothing is staged and nothing is modified, report that there is nothing to commit.
+- Output only what is necessary: skip meta-commentary about eval fixtures or execution context.
