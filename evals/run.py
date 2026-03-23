@@ -395,35 +395,78 @@ def main() -> None:
         print(f"\n{'='*60}")
         print("  Evolution Summary")
         print(f"{'='*60}")
+
+        # Build table rows
+        rows = []
         total_cost = 0
         for r in all_results:
-            total = r["scores"].get("total", "?")
-            tokens = r["token_usage"]["combined"]["total_tokens"]
+            total = r["scores"].get("total", 0)
+            max_possible = r["scores"].get("max_possible", "?")
+            pct = f"{total / max_possible * 100:.0f}%" if isinstance(max_possible, (int, float)) and max_possible > 0 else "?"
+            score_str = f"{total}/{max_possible} ({pct})"
+
+            exec_tokens = r["token_usage"]["execution"]["total_tokens"]
+            score_tokens = r["token_usage"]["scoring"]["total_tokens"]
+            evolve_tokens = r["token_usage"].get("evolution", {}).get("total_tokens", 0)
+            iter_total = exec_tokens + score_tokens + evolve_tokens
+
             cost = r["token_usage"]["combined"].get("cost_usd", 0)
             evolve_cost = r["token_usage"].get("evolution", {}).get("cost_usd", 0)
             total_cost += cost + evolve_cost
-            print(f"    Iteration {r['iteration']}: {total}/{r['scores'].get('max_possible','?')} ({tokens:,} tokens)")
 
+            rows.append({
+                "iter": str(r["iteration"]),
+                "score": score_str,
+                "exec": f"{exec_tokens:,}",
+                "score_tok": f"{score_tokens:,}",
+                "evolve": f"{evolve_tokens:,}" if evolve_tokens else "-",
+                "total_tok": f"{iter_total:,}",
+            })
+
+        # Column headers and widths
+        headers = {
+            "iter": "Iter",
+            "score": "Score",
+            "exec": "Exec Tokens",
+            "score_tok": "Score Tokens",
+            "evolve": "Evolve Tokens",
+            "total_tok": "Total Tokens",
+        }
+        col_widths = {
+            k: max(len(headers[k]), *(len(r[k]) for r in rows))
+            for k in headers
+        }
+
+        # Print table
+        header_line = "  ".join(h.rjust(col_widths[k]) for k, h in headers.items())
+        separator = "  ".join("-" * col_widths[k] for k in headers)
+        print(f"\n    {header_line}")
+        print(f"    {separator}")
+        for r in rows:
+            row_line = "  ".join(r[k].rjust(col_widths[k]) for k in headers)
+            print(f"    {row_line}")
+
+        # Score change
         first = all_results[0]["scores"].get("total", 0)
         last = all_results[-1]["scores"].get("total", 0)
         delta = last - first
         sign = "+" if delta > 0 else ""
         print(f"\n    Score change: {sign}{delta} ({first} -> {last})")
 
-        # Show execution token trend
-        exec_tokens = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]
-        first_exec = exec_tokens[0]
-        last_exec = exec_tokens[-1]
+        # Execution token trend
+        exec_list = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]
+        first_exec = exec_list[0]
+        last_exec = exec_list[-1]
         exec_delta = last_exec - first_exec
         exec_sign = "+" if exec_delta > 0 else ""
         print(f"    Exec tokens change: {exec_sign}{exec_delta:,} ({first_exec:,} -> {last_exec:,})")
 
-        total_tokens = sum(
+        grand_total_tokens = sum(
             r["token_usage"]["combined"]["total_tokens"]
             + r["token_usage"].get("evolution", {}).get("total_tokens", 0)
             for r in all_results
         )
-        print(f"    Total tokens used: {total_tokens:,}")
+        print(f"    Total tokens used: {grand_total_tokens:,}")
         if total_cost:
             print(f"    Total cost: ${total_cost:.4f}")
 
