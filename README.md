@@ -24,7 +24,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
 | Evolve | `/evolve [command]` | Runs the self-evolution eval loop — executes a command against test fixtures, scores the output, and iteratively improves the command prompt. Supports `--optimize score\|tokens\|both` modes |
-| Usage | `/usage` | Checks your current Claude usage/quota by reading the Claude settings page via Selenium and displaying a progress bar |
+| Usage Text | `/usage-text` | Checks your current Claude usage/quota and next reset time by reading the Claude settings page via Selenium and displaying a progress bar |
 
 ## Setup
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Read Claude usage percentage from https://claude.ai/settings/usage
-using Selenium with an existing Chrome profile.
+Read Claude usage percentage and next reset time from
+https://claude.ai/settings/usage using Selenium with an existing Chrome profile.
 
 Usage:
     python tools/read_usage.py                          # auto-detect Chrome profile
@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import sys
 import time
 
@@ -63,8 +64,52 @@ def build_driver(user_data_dir: str, profile_dir: str, headless: bool = False) -
     return webdriver.Chrome(options=options)
 
 
+def extract_reset_time(page_text: str, driver: webdriver.Chrome) -> str | None:
+    """Try to find the next usage reset / renewal time from the page."""
+    # Common patterns: "Resets in 3h 42m", "Resets at 2:00 PM",
+    # "Next reset: March 24, 2026", "Usage resets in 3 hours",
+    # "Your usage will reset in ...", "Renews in ..."
+    reset_patterns = [
+        r"(?:resets?|renews?|refreshes?)\s+(?:in|at)\s+(.+?)(?:\.|$)",
+        r"(?:next\s+(?:reset|renewal|refresh))\s*[:\-]\s*(.+?)(?:\.|$)",
+        r"(?:usage\s+(?:will\s+)?(?:reset|renew|refresh))\s+(?:in|at|on)\s+(.+?)(?:\.|$)",
+        r"(?:limit\s+(?:will\s+)?(?:reset|renew|refresh))\s+(?:in|at|on)\s+(.+?)(?:\.|$)",
+    ]
+
+    for pattern in reset_patterns:
+        match = re.search(pattern, page_text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+    # Try to find a time element with a datetime attribute near reset-related text
+    try:
+        time_els = driver.find_elements(By.TAG_NAME, "time")
+        for el in time_els:
+            dt = el.get_attribute("datetime")
+            if dt:
+                return dt
+    except Exception:
+        pass
+
+    # Try to find elements with reset-related aria-labels or titles
+    try:
+        for selector in [
+            "[aria-label*='reset']", "[aria-label*='renew']",
+            "[title*='reset']", "[title*='renew']",
+        ]:
+            els = driver.find_elements(By.CSS_SELECTOR, selector)
+            for el in els:
+                label = el.get_attribute("aria-label") or el.get_attribute("title") or ""
+                if label:
+                    return label.strip()
+    except Exception:
+        pass
+
+    return None
+
+
 def extract_usage(driver: webdriver.Chrome) -> dict:
-    """Navigate to the usage page and extract the percentage remaining."""
+    """Navigate to the usage page and extract the percentage remaining and reset time."""
     driver.get(USAGE_URL)
 
     wait = WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT)
@@ -76,18 +121,19 @@ def extract_usage(driver: webdriver.Chrome) -> dict:
 
     page_text = driver.find_element(By.TAG_NAME, "body").text
 
-    # Look for percentage patterns in the page text
-    import re
-
     result = {
         "url": USAGE_URL,
         "raw_text": None,
         "percentage_used": None,
         "percentage_remaining": None,
+        "reset_time": None,
         "status": "unknown",
     }
 
-    # Try to find a progress bar or usage indicator element
+    # --- Extract reset / next session time ---
+    result["reset_time"] = extract_reset_time(page_text, driver)
+
+    # --- Extract usage percentage ---
     # Common patterns: "X% used", "X% remaining", or a progress/meter element
     percentage_patterns = [
         r"(\d+(?:\.\d+)?)\s*%\s*(?:of\s+)?(?:usage|limit|quota)?\s*used",
@@ -146,6 +192,10 @@ def extract_usage(driver: webdriver.Chrome) -> dict:
         except Exception:
             pass
 
+    # If we found reset_time but not percentage, still mark partial success
+    if result["status"] == "unknown" and result["reset_time"]:
+        result["status"] = "partial"
+
     if result["status"] == "unknown":
         # Capture a snippet of the page for debugging
         snippet = page_text[:500] if page_text else "(empty page)"
@@ -200,16 +250,21 @@ def main() -> None:
         output = {k: v for k, v in result.items() if k != "debug_snippet"}
         print(json.dumps(output, indent=2))
     else:
-        if result["status"] == "ok":
-            print(f"Usage: {result['percentage_used']}% used, {result['percentage_remaining']}% remaining")
+        if result["status"] in ("ok", "partial"):
+            if result["percentage_used"] is not None:
+                print(f"Usage: {result['percentage_used']}% used, {result['percentage_remaining']}% remaining")
+            if result["reset_time"]:
+                print(f"Next reset: {result['reset_time']}")
+            if result["percentage_used"] is None and result["reset_time"]:
+                print("(Could not find usage percentage, but found reset time.)")
         elif result["status"] == "not_found":
-            print("Could not find a usage percentage on the page.")
+            print("Could not find usage percentage or reset time on the page.")
             if "debug_snippet" in result:
                 print(f"Page preview:\n{result['debug_snippet']}")
         else:
             print(f"Error: {result.get('error', 'unknown')}")
 
-    sys.exit(0 if result["status"] == "ok" else 1)
+    sys.exit(0 if result["status"] in ("ok", "partial") else 1)
 
 
 if __name__ == "__main__":
