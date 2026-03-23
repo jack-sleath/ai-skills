@@ -1,28 +1,49 @@
-You are running the self-evolution eval loop for a skill command.
+You are running the self-evolution eval loop for one or more skill commands.
 
 ---
 
-## Step 1 — Pick the command
+## Step 0 — Detect mode
 
-If the user provided a command name as an argument (e.g. `/evolve feature`), use that. Otherwise, list the available commands in `commands/` (excluding this file) and ask the user to pick one.
+Check the arguments the user passed:
+
+- **Single command** — e.g. `/evolve feature` → single mode (Steps 1–6 as before)
+- **Multiple commands** — e.g. `/evolve feature,commit,story --runs 5` or `/evolve feature commit story --score 4.0` → batch mode (go to Step B1)
+- **No arguments** — ask the user to pick a command, then single mode
+
+### Argument parsing
+
+| Flag | Meaning | Default |
+|---|---|---|
+| `--runs N` | Max iterations per command | 3 |
+| `--score N` | Stop early when total score ≥ N | _(no limit — run all iterations)_ |
+| `--model M` | Model to use | `claude-sonnet-4-6` |
+| `--optimize O` | `score`, `tokens`, or `both` | `score` |
+
+Commands can be separated by commas or spaces. The flags apply to every command in the batch.
+
+---
+
+## Step 1 — Pick the command (single mode)
+
+If the user provided a single command name as an argument (e.g. `/evolve feature`), use that. Otherwise, list the available commands in `commands/` (excluding this file) and ask the user to pick one.
 
 ---
 
 ## Step 2 — Check prerequisites
 
-Verify that the following exist:
+Verify that the following exist for the target command (or every command in batch mode):
 - `evals/criteria/<command>.md` — the scoring rubric for the chosen command
 - `evals/fixtures/<command>/` — a directory with at least one fixture file
 
-If either is missing, tell the user and stop. Explain that they need to create a criteria file and fixtures before evolving a command.
+If either is missing, tell the user and stop (single mode) or skip that command with a warning (batch mode).
 
 Also verify that the `ANTHROPIC_API_KEY` environment variable is set. If not, tell the user to set it.
 
 ---
 
-## Step 3 — Ask for parameters
+## Step 3 — Ask for parameters (single mode only)
 
-Ask the user:
+In single mode, ask the user if they didn't already pass flags:
 1. **How many iterations?** (default: 3)
 2. **Which model?** (default: `claude-sonnet-4-6` — cheaper for iteration; suggest `claude-opus-4-6` for final quality runs)
 3. **Optimisation target?**
@@ -30,6 +51,8 @@ Ask the user:
    - `tokens` — reduce token usage while keeping score above a threshold
    - `both` — improve score AND reduce tokens simultaneously
 4. **Minimum score threshold?** (only when optimising for `tokens` or `both`; defaults to the iteration-1 score as a floor)
+
+In batch mode, all parameters come from the flags — do not ask interactively.
 
 ---
 
@@ -42,6 +65,8 @@ python3 evals/run.py <command> --evolve --runs <N> --model <model> --optimize <t
 ```
 
 If the user chose `tokens` or `both`, also pass `--optimize tokens` (or `--optimize both`). If a minimum score threshold was specified, pass `--min-score <value>`.
+
+**Early stop on `--score`:** After each iteration, check the total score in the result JSON. If it meets or exceeds the `--score` threshold, stop iterating for this command and move on.
 
 Stream the output to the user so they can watch progress.
 
@@ -96,9 +121,75 @@ If the script fails (e.g. Chrome is open, Selenium not installed), show the API 
 
 ## Step 6 — Confirm or revert
 
-Ask the user:
+**Single mode:** Ask the user:
 - **Keep the evolved command?** (the file has already been updated)
 - **Revert to the original?** (restore from git: `git checkout commands/<command>.md`)
 - **Try more iterations?**
 
 If the user wants to revert, run `git checkout commands/<command>.md` to restore the original.
+
+**Batch mode:** Skip this step — all changes are kept. The user can selectively revert after reviewing the batch summary.
+
+---
+
+## Batch mode steps
+
+### Step B1 — Validate the batch
+
+1. Parse the command list and flags from the arguments (see Step 0 for flag definitions).
+2. Run Step 2 (prerequisite check) for every command in the list. Collect two lists: **ready** and **skipped**.
+3. If any commands were skipped, show them with the reason (missing criteria, missing fixtures).
+4. If no commands are ready, stop.
+5. Show the batch plan and ask for confirmation:
+
+```
+Batch evolve plan:
+  Commands:  feature, commit, story
+  Runs:      5 per command (or until score ≥ 4.0)
+  Model:     claude-sonnet-4-6
+  Optimize:  score
+
+  Skipped:   audit (no criteria file)
+
+Proceed? (y/n)
+```
+
+### Step B2 — Run the batch
+
+For each ready command, in order:
+
+1. Show a header: `── Evolving: <command> (N of M) ──`
+2. Run Step 4 (eval loop) with the batch parameters.
+   - If `--score` was given and a run meets the threshold, stop early for this command and note "passed" in the results.
+3. Run Step 5 (review results) — show the per-command summary table.
+4. Move to the next command.
+
+Do **not** ask for confirmation between commands — just proceed.
+
+### Step B3 — Batch summary
+
+After all commands have been processed, show a single summary table:
+
+```
+┌─ Batch Results ──────────────────────────────────────────────┐
+│ Command     Iterations   Final Score   Status                │
+│ ─────────   ──────────   ───────────   ──────────────────    │
+│ feature     3 of 5       4.2           ✓ passed (≥ 4.0)     │
+│ commit      5 of 5       3.8           ✗ did not reach 4.0  │
+│ story       2 of 5       4.5           ✓ passed (≥ 4.0)     │
+│                                                              │
+│ Total API tokens: 134,520                                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- If `--score` was not given, the Status column shows just `done` for every command.
+- Sum the API tokens across all commands.
+
+### Step B4 — Batch usage check
+
+Run the usage check from Step 5b once (not per command) to show the account quota after the full batch.
+
+Then ask the user:
+- **Keep all changes?**
+- **Revert specific commands?** (list them — run `git checkout commands/<command>.md` for each)
+- **Revert all?**
