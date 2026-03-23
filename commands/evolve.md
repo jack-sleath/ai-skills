@@ -15,7 +15,7 @@ Check the arguments the user passed:
 | Flag | Meaning | Default |
 |---|---|---|
 | `--runs N` | Max iterations per command | 3 |
-| `--score N` | Stop early when total score ≥ N | _(no limit — run all iterations)_ |
+| `--score N%` | Stop early when score ≥ N% (e.g. `--score 85%`) | _(no limit — run all iterations)_ |
 | `--model M` | Model to use | `claude-sonnet-4-6` |
 | `--optimize O` | `score`, `tokens`, or `both` | `score` |
 
@@ -66,7 +66,7 @@ python3 evals/run.py <command> --evolve --runs <N> --model <model> --optimize <t
 
 If the user chose `tokens` or `both`, also pass `--optimize tokens` (or `--optimize both`). If a minimum score threshold was specified, pass `--min-score <value>`.
 
-**Early stop on `--score`:** After each iteration, check the total score in the result JSON. If it meets or exceeds the `--score` threshold, stop iterating for this command and move on.
+**Early stop on `--score`:** After each iteration, read the result JSON to get `total` and `max_possible`. Calculate the percentage: `(total / max_possible) × 100`. If it meets or exceeds the `--score` threshold, stop iterating for this command and move on. This means `--score 85%` works consistently regardless of whether a command has 5, 6, or 7 dimensions.
 
 Stream the output to the user so they can watch progress.
 
@@ -80,7 +80,7 @@ After the loop completes:
 2. Show the user a summary table:
    - Iteration number
    - Score per dimension
-   - Total score
+   - Total score (raw and percentage, e.g. `26/30 — 87%`)
    - Token usage (input / output / total)
    - Score delta from previous iteration
 3. If the score improved, show the diff of changes made to the command file.
@@ -145,7 +145,7 @@ If the user wants to revert, run `git checkout commands/<command>.md` to restore
 ```
 Batch evolve plan:
   Commands:  feature, commit, story
-  Runs:      5 per command (or until score ≥ 4.0)
+  Runs:      5 per command (or until score ≥ 85%)
   Model:     claude-sonnet-4-6
   Optimize:  score
 
@@ -171,17 +171,18 @@ Do **not** ask for confirmation between commands — just proceed.
 After all commands have been processed, show a single summary table:
 
 ```
-┌─ Batch Results ──────────────────────────────────────────────┐
-│ Command     Iterations   Final Score   Status                │
-│ ─────────   ──────────   ───────────   ──────────────────    │
-│ feature     3 of 5       4.2           ✓ passed (≥ 4.0)     │
-│ commit      5 of 5       3.8           ✗ did not reach 4.0  │
-│ story       2 of 5       4.5           ✓ passed (≥ 4.0)     │
-│                                                              │
-│ Total API tokens: 134,520                                    │
-└──────────────────────────────────────────────────────────────┘
+┌─ Batch Results ──────────────────────────────────────────────────┐
+│ Command     Iterations   Score         Status                    │
+│ ─────────   ──────────   ───────────   ──────────────────────    │
+│ feature     3 of 5       26/30 (87%)   ✓ passed (≥ 85%)         │
+│ commit      5 of 5       24/30 (80%)   ✗ did not reach 85%      │
+│ story       2 of 5       22/25 (88%)   ✓ passed (≥ 85%)         │
+│                                                                  │
+│ Total API tokens: 134,520                                        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
+- Scores are shown as `raw/max (percentage)` so differences in dimension count are visible.
 - If `--score` was not given, the Status column shows just `done` for every command.
 - Sum the API tokens across all commands.
 
