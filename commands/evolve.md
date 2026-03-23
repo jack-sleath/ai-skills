@@ -25,6 +25,11 @@ Also verify that the `ANTHROPIC_API_KEY` environment variable is set. If not, te
 Ask the user:
 1. **How many iterations?** (default: 3)
 2. **Which model?** (default: `claude-sonnet-4-6` — cheaper for iteration; suggest `claude-opus-4-6` for final quality runs)
+3. **Optimisation target?**
+   - `score` (default) — maximise eval score, ignore token count
+   - `tokens` — reduce token usage while keeping score above a threshold
+   - `both` — improve score AND reduce tokens simultaneously
+4. **Minimum score threshold?** (only when optimising for `tokens` or `both`; defaults to the iteration-1 score as a floor)
 
 ---
 
@@ -33,8 +38,10 @@ Ask the user:
 Run the eval script:
 
 ```bash
-python3 evals/run.py <command> --evolve --runs <N> --model <model>
+python3 evals/run.py <command> --evolve --runs <N> --model <model> --optimize <target>
 ```
+
+If the user chose `tokens` or `both`, also pass `--optimize tokens` (or `--optimize both`). If a minimum score threshold was specified, pass `--min-score <value>`.
 
 Stream the output to the user so they can watch progress.
 

@@ -6,9 +6,11 @@ Runs a command against test fixtures, scores the output against criteria,
 and optionally loops to evolve the command prompt.
 
 Usage:
-    python evals/run.py feature                  # single eval run
-    python evals/run.py feature --evolve --runs 3 # evolve loop (3 iterations)
-    python evals/run.py feature --model claude-sonnet-4-6  # use a specific model
+    python evals/run.py feature                           # single eval run
+    python evals/run.py feature --evolve --runs 3         # evolve for score (default)
+    python evals/run.py feature --evolve --optimize tokens # evolve to reduce token usage
+    python evals/run.py feature --evolve --optimize both   # improve score + reduce tokens
+    python evals/run.py feature --optimize tokens --min-score 20  # keep score >= 20
 """
 
 import argparse
@@ -79,15 +81,51 @@ def build_evolution_prompt(
     command_content: str,
     scores: dict,
     command_output: str,
+    optimize: str = "score",
+    token_usage: dict | None = None,
+    min_score: int | None = None,
 ) -> str:
-    """Build the prompt for evolving the command based on scores."""
+    """Build the prompt for evolving the command based on scores and optimization target."""
+    if optimize == "tokens":
+        objective = (
+            "Your task: Edit the skill definition to REDUCE TOKEN USAGE while "
+            f"keeping the total score at or above {min_score}. "
+            "Strategies: remove redundant instructions, combine similar steps, "
+            "use more concise phrasing, eliminate unnecessary examples, reduce "
+            "output verbosity requirements. Do NOT sacrifice quality — only cut "
+            "waste.\n\n"
+        )
+    elif optimize == "both":
+        objective = (
+            "Your task: Edit the skill definition to BOTH improve scores AND "
+            "reduce token usage. Prioritise fixing the lowest-scoring dimensions "
+            "first, but also look for opportunities to tighten the prompt — remove "
+            "redundancy, combine steps, use concise phrasing. Every token saved "
+            "without losing quality is a win.\n\n"
+        )
+    else:  # score (default)
+        objective = (
+            "Your task: Edit the skill definition to improve the lowest-scoring "
+            "dimensions. Make targeted, minimal changes — do not rewrite from scratch. "
+            "Preserve the overall structure and intent of the skill.\n\n"
+        )
+
+    token_block = ""
+    if token_usage and optimize in ("tokens", "both"):
+        exec_usage = token_usage.get("execution", {})
+        token_block = (
+            "## Token Usage\n\n"
+            f"- Execution input tokens: {exec_usage.get('input_tokens', '?'):,}\n"
+            f"- Execution output tokens: {exec_usage.get('output_tokens', '?'):,}\n"
+            f"- Execution total tokens: {exec_usage.get('total_tokens', '?'):,}\n\n"
+            "Aim to reduce these numbers in the next iteration.\n\n"
+        )
+
     return (
         "You are an expert prompt engineer improving a Claude Code skill command.\n\n"
         "Below is the current skill definition, the output it produced, and the "
         "evaluation scores with suggestions.\n\n"
-        "Your task: Edit the skill definition to improve the lowest-scoring "
-        "dimensions. Make targeted, minimal changes — do not rewrite from scratch. "
-        "Preserve the overall structure and intent of the skill.\n\n"
+        f"{objective}"
         "Return ONLY the improved skill file content — no explanation, no markdown "
         "fences, just the raw .md content.\n\n"
         "## Current Skill Definition\n\n"
@@ -95,7 +133,8 @@ def build_evolution_prompt(
         "## Output Produced\n\n"
         f"```\n{command_output}\n```\n\n"
         "## Evaluation Scores\n\n"
-        f"```json\n{json.dumps(scores, indent=2)}\n```"
+        f"```json\n{json.dumps(scores, indent=2)}\n```\n\n"
+        f"{token_block}"
     )
 
 
@@ -194,13 +233,19 @@ def evolve_command(
     command_output: str,
     scores: dict,
     model: str,
+    optimize: str = "score",
+    token_usage: dict | None = None,
+    min_score: int | None = None,
 ) -> tuple[str, dict]:
     """Use the API to improve the command based on scores. Returns (new_content, usage)."""
     command_path = COMMANDS_DIR / f"{command_name}.md"
     command_content = read_file(command_path)
 
     print("  Evolving command...", flush=True)
-    evolve_prompt = build_evolution_prompt(command_content, scores, command_output)
+    evolve_prompt = build_evolution_prompt(
+        command_content, scores, command_output,
+        optimize=optimize, token_usage=token_usage, min_score=min_score,
+    )
     new_content, usage = call_api(client, evolve_prompt, model)
     return new_content, usage
 
@@ -239,6 +284,18 @@ def main() -> None:
     )
     parser.add_argument(
         "--model", default=DEFAULT_MODEL, help=f"Model to use (default: {DEFAULT_MODEL})"
+    )
+    parser.add_argument(
+        "--optimize",
+        choices=["score", "tokens", "both"],
+        default="score",
+        help="Optimization target: score (default), tokens, or both",
+    )
+    parser.add_argument(
+        "--min-score",
+        type=int,
+        default=None,
+        help="Minimum total score to maintain when --optimize is tokens or both",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="Print prompts without calling the API"
@@ -283,13 +340,27 @@ def main() -> None:
 
         # Evolution step
         if args.evolve and i < args.runs:
-            if current_total >= result["scores"].get("max_possible", 30):
+            # Early stop: perfect score when optimising for score
+            if args.optimize in ("score", "both") and current_total >= result["scores"].get("max_possible", 30):
                 print("\n  Perfect score — stopping early.")
                 break
+
+            # Determine min_score threshold for token optimisation
+            min_score = args.min_score
+            if min_score is None and args.optimize in ("tokens", "both"):
+                # Default: use iteration-1 score as the floor
+                if i == 1:
+                    min_score = current_total
+                    print(f"\n  Using iteration 1 score ({min_score}) as minimum threshold.")
+                else:
+                    min_score = all_results[0]["scores"].get("total", 0)
 
             new_content, evolve_usage = evolve_command(
                 client, args.command, result["command_output"],
                 result["scores"], args.model,
+                optimize=args.optimize,
+                token_usage=result["token_usage"],
+                min_score=min_score,
             )
 
             # Write the evolved command
@@ -318,6 +389,14 @@ def main() -> None:
         delta = last - first
         sign = "+" if delta > 0 else ""
         print(f"\n    Score change: {sign}{delta} ({first} → {last})")
+
+        # Show execution token trend
+        exec_tokens = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]
+        first_exec = exec_tokens[0]
+        last_exec = exec_tokens[-1]
+        exec_delta = last_exec - first_exec
+        exec_sign = "+" if exec_delta > 0 else ""
+        print(f"    Exec tokens change: {exec_sign}{exec_delta:,} ({first_exec:,} → {last_exec:,})")
 
         total_tokens = sum(
             r["token_usage"]["combined"]["total_tokens"]
