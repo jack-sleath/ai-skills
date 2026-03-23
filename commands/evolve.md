@@ -63,29 +63,34 @@ After the loop completes:
 
 ---
 
-## Step 5b — Cost estimate
+## Step 5b — Usage check
 
-After showing the results table, display a **Cost Estimate** box summarising the total resource usage:
+After showing the results table, check how much of the user's Claude quota was consumed by running `/usage-text`. This delegates to `tools/read_usage.py` which loads the Claude usage page via Selenium and returns the rendered page content.
 
-1. **API tokens** — sum the `total_tokens` from every iteration's result JSON (the `combined` and `evolution` usage fields). This is exact.
-2. **Estimated session tokens** — estimate the Claude Code session overhead (this skill's own orchestration) at roughly **2,000 tokens per iteration** (reading files, asking questions, displaying output). This is approximate.
-3. **Grand total** — API tokens + estimated session tokens.
-4. **Approximate cost** — calculate using these per-token rates (input ≈ $3/M tokens, output ≈ $15/M tokens for Sonnet; input ≈ $15/M, output ≈ $75/M for Opus). If the exact split is unknown, use the blended rate of $8/M tokens for Sonnet or $40/M tokens for Opus.
+Run the script directly (no need to invoke the full `/usage-text` skill):
 
-Display it like this:
-
-```
-┌─ Cost Estimate ──────────────────────────────┐
-│ API tokens (exact):       45,230             │
-│ Session overhead (est.):  ~6,000             │
-│ Grand total:              ~51,230 tokens     │
-│ Estimated API cost:       ~$0.36 (sonnet)    │
-│ Note: Session overhead is a rough estimate.  │
-│ Use /cost for precise API-user billing.      │
-└──────────────────────────────────────────────┘
+```bash
+python3 tools/read_usage.py --html
 ```
 
-This gives the user a ballpark sense of what each evolve run costs in tokens and dollars.
+Parse the JSON output. Read `page_text` (and `page_html` if needed) to find the **current usage percentage**. Ignore reset time for now.
+
+Then display a box combining the API token totals from the eval results with the live quota reading:
+
+```
+┌─ Usage Summary ──────────────────────────────┐
+│ API tokens this run:  45,230                  │
+│                                               │
+│ Account quota:                                │
+│ ██████████████░░░░░░░░░░░░░░  42% used       │
+│                                               │
+└───────────────────────────────────────────────┘
+```
+
+- **API tokens this run** — sum the `total_tokens` from every iteration's result JSON (the `combined` and `evolution` usage fields).
+- **Account quota** — the usage percentage read from the page. Progress bar should be 28 characters wide (`█` for used, `░` for remaining).
+
+If the script fails (e.g. Chrome is open, Selenium not installed), show the API token total and note that the live usage check was skipped, with a hint to try `/usage-text` manually.
 
 ---
 
