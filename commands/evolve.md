@@ -37,7 +37,7 @@ Verify that the following exist for the target command (or every command in batc
 
 If either is missing, tell the user and stop (single mode) or skip that command with a warning (batch mode).
 
-Also verify that the `ANTHROPIC_API_KEY` environment variable is set. If not, tell the user to set it.
+Also verify that the `claude` CLI is available on the PATH. If not, tell the user to install Claude Code.
 
 ---
 

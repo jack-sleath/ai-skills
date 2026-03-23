@@ -24,7 +24,7 @@ Before running, three things must exist for the target command:
 2. **Criteria file** — `evals/criteria/<command>.md` (defines what "good output" looks like, with scoring dimensions)
 3. **Fixtures directory** — `evals/fixtures/<command>/` (contains the project files the command will be run against)
 
-The `ANTHROPIC_API_KEY` environment variable must also be set.
+The `claude` CLI must be installed and available on the PATH (no API key needed).
 
 ## How a Single Eval Works
 

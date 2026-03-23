@@ -5,6 +5,9 @@ Eval runner for ai-skills commands.
 Runs a command against test fixtures, scores the output against criteria,
 and optionally loops to evolve the command prompt.
 
+Uses the Claude Code CLI (`claude -p`) instead of the Anthropic API directly,
+so no API key is needed — just a working `claude` installation.
+
 Usage:
     python evals/run.py feature                           # single eval run
     python evals/run.py feature --evolve --runs 3         # evolve for score (default)
@@ -15,13 +18,10 @@ Usage:
 
 import argparse
 import json
-import os
+import subprocess
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
-
-import anthropic
 
 EVALS_DIR = Path(__file__).resolve().parent
 ROOT_DIR = EVALS_DIR.parent
@@ -138,23 +138,44 @@ def build_evolution_prompt(
     )
 
 
-def call_api(
-    client: anthropic.Anthropic,
-    prompt: str,
-    model: str,
-) -> tuple[str, dict]:
-    """Call the Anthropic API and return (response_text, usage_dict)."""
-    response = client.messages.create(
-        model=model,
-        max_tokens=8192,
-        messages=[{"role": "user", "content": prompt}],
+def call_claude(prompt: str, model: str) -> tuple[str, dict]:
+    """Call the Claude CLI and return (response_text, usage_dict)."""
+    result = subprocess.run(
+        [
+            "claude", "-p",
+            "--output-format", "json",
+            "--model", model,
+        ],
+        input=prompt,
+        capture_output=True,
+        text=True,
+        timeout=300,
     )
+    if result.returncode != 0:
+        sys.exit(
+            f"Claude CLI failed (exit {result.returncode}):\n"
+            f"stderr: {result.stderr}\n"
+            f"stdout: {result.stdout[:500]}"
+        )
+
+    data = json.loads(result.stdout)
+
+    # Check for CLI-level errors (e.g. not logged in)
+    if data.get("is_error"):
+        sys.exit(f"Claude CLI error: {data.get('result', 'unknown error')}")
+
+    text = data.get("result", "")
+
+    # Extract token usage from the CLI JSON response
+    cli_usage = data.get("usage", {})
+    input_tokens = cli_usage.get("input_tokens", 0)
+    output_tokens = cli_usage.get("output_tokens", 0)
     usage = {
-        "input_tokens": response.usage.input_tokens,
-        "output_tokens": response.usage.output_tokens,
-        "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "cost_usd": data.get("total_cost_usd", 0),
     }
-    text = response.content[0].text if response.content else ""
     return text, usage
 
 
@@ -178,12 +199,8 @@ def save_result(command_name: str, iteration: int, result: dict) -> Path:
     return out_path
 
 
-def run_single_eval(
-    client: anthropic.Anthropic,
-    command_name: str,
-    model: str,
-) -> dict:
-    """Run one eval cycle: execute command → score output. Returns result dict."""
+def run_single_eval(command_name: str, model: str) -> dict:
+    """Run one eval cycle: execute command -> score output. Returns result dict."""
     command_path = COMMANDS_DIR / f"{command_name}.md"
     criteria_path = CRITERIA_DIR / f"{command_name}.md"
 
@@ -199,12 +216,12 @@ def run_single_eval(
     # Step 1: Execute the command
     print("  Running command...", flush=True)
     exec_prompt = build_execution_prompt(command_content, fixtures)
-    command_output, exec_usage = call_api(client, exec_prompt, model)
+    command_output, exec_usage = call_claude(exec_prompt, model)
 
     # Step 2: Score the output
     print("  Scoring output...", flush=True)
     score_prompt = build_scoring_prompt(criteria_content, command_output)
-    score_raw, score_usage = call_api(client, score_prompt, model)
+    score_raw, score_usage = call_claude(score_prompt, model)
     scores = parse_scores(score_raw)
 
     total_usage = {
@@ -214,6 +231,7 @@ def run_single_eval(
             "input_tokens": exec_usage["input_tokens"] + score_usage["input_tokens"],
             "output_tokens": exec_usage["output_tokens"] + score_usage["output_tokens"],
             "total_tokens": exec_usage["total_tokens"] + score_usage["total_tokens"],
+            "cost_usd": exec_usage.get("cost_usd", 0) + score_usage.get("cost_usd", 0),
         },
     }
 
@@ -228,7 +246,6 @@ def run_single_eval(
 
 
 def evolve_command(
-    client: anthropic.Anthropic,
     command_name: str,
     command_output: str,
     scores: dict,
@@ -237,7 +254,7 @@ def evolve_command(
     token_usage: dict | None = None,
     min_score: int | None = None,
 ) -> tuple[str, dict]:
-    """Use the API to improve the command based on scores. Returns (new_content, usage)."""
+    """Use the CLI to improve the command based on scores. Returns (new_content, usage)."""
     command_path = COMMANDS_DIR / f"{command_name}.md"
     command_content = read_file(command_path)
 
@@ -246,7 +263,7 @@ def evolve_command(
         command_content, scores, command_output,
         optimize=optimize, token_usage=token_usage, min_score=min_score,
     )
-    new_content, usage = call_api(client, evolve_prompt, model)
+    new_content, usage = call_claude(evolve_prompt, model)
     return new_content, usage
 
 
@@ -266,10 +283,13 @@ def print_scores(scores: dict) -> None:
 def print_usage(usage: dict) -> None:
     """Pretty-print token usage."""
     combined = usage.get("combined", usage)
+    cost = combined.get("cost_usd", 0)
+    cost_str = f"  cost: ${cost:.4f}" if cost else ""
     print(
         f"    Tokens — in: {combined['input_tokens']:,}  "
         f"out: {combined['output_tokens']:,}  "
         f"total: {combined['total_tokens']:,}"
+        f"{cost_str}"
     )
 
 
@@ -298,14 +318,10 @@ def main() -> None:
         help="Minimum total score to maintain when --optimize is tokens or both",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="Print prompts without calling the API"
+        "--dry-run", action="store_true", help="Print prompts without calling the CLI"
     )
     args = parser.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("Set ANTHROPIC_API_KEY environment variable before running.")
-
-    client = anthropic.Anthropic()
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     all_results = []
@@ -323,7 +339,7 @@ def main() -> None:
                   len(build_execution_prompt(command_content, fixtures)), "chars")
             break
 
-        result = run_single_eval(client, args.command, args.model)
+        result = run_single_eval(args.command, args.model)
         result["iteration"] = i
 
         print("\n  Scores:")
@@ -356,7 +372,7 @@ def main() -> None:
                     min_score = all_results[0]["scores"].get("total", 0)
 
             new_content, evolve_usage = evolve_command(
-                client, args.command, result["command_output"],
+                args.command, result["command_output"],
                 result["scores"], args.model,
                 optimize=args.optimize,
                 token_usage=result["token_usage"],
@@ -379,16 +395,20 @@ def main() -> None:
         print(f"\n{'='*60}")
         print("  Evolution Summary")
         print(f"{'='*60}")
+        total_cost = 0
         for r in all_results:
             total = r["scores"].get("total", "?")
             tokens = r["token_usage"]["combined"]["total_tokens"]
+            cost = r["token_usage"]["combined"].get("cost_usd", 0)
+            evolve_cost = r["token_usage"].get("evolution", {}).get("cost_usd", 0)
+            total_cost += cost + evolve_cost
             print(f"    Iteration {r['iteration']}: {total}/{r['scores'].get('max_possible','?')} ({tokens:,} tokens)")
 
         first = all_results[0]["scores"].get("total", 0)
         last = all_results[-1]["scores"].get("total", 0)
         delta = last - first
         sign = "+" if delta > 0 else ""
-        print(f"\n    Score change: {sign}{delta} ({first} → {last})")
+        print(f"\n    Score change: {sign}{delta} ({first} -> {last})")
 
         # Show execution token trend
         exec_tokens = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]
@@ -396,7 +416,7 @@ def main() -> None:
         last_exec = exec_tokens[-1]
         exec_delta = last_exec - first_exec
         exec_sign = "+" if exec_delta > 0 else ""
-        print(f"    Exec tokens change: {exec_sign}{exec_delta:,} ({first_exec:,} → {last_exec:,})")
+        print(f"    Exec tokens change: {exec_sign}{exec_delta:,} ({first_exec:,} -> {last_exec:,})")
 
         total_tokens = sum(
             r["token_usage"]["combined"]["total_tokens"]
@@ -404,6 +424,8 @@ def main() -> None:
             for r in all_results
         )
         print(f"    Total tokens used: {total_tokens:,}")
+        if total_cost:
+            print(f"    Total cost: ${total_cost:.4f}")
 
 
 if __name__ == "__main__":
