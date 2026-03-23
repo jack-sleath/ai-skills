@@ -53,7 +53,12 @@ Utility
 
 Evolution
 ─────────
-/evolve [command]
+/create-criteria [command(s)]
+    └── reads → commands/<command>.md (to derive dimensions)
+    └── creates → evals/criteria/<command>.md (scoring rubric)
+    └── creates → evals/fixtures/<command>/ (sample inputs)
+
+/evolve [command(s)]
     └── runs → evals/run.py (API-based eval runner)
     └── reads → evals/criteria/<command>.md (scoring rubric)
     └── reads → evals/fixtures/<command>/ (test inputs)

@@ -23,6 +23,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Audit | `/audit` | Reverse-engineers `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md` (Milestone 0) from an existing project's Swagger definitions, unit tests, and optional Gherkin — one set of files per VS project if a solution is present |
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
+| Create Criteria | `/create-criteria [command(s)]` | Scaffolds eval criteria and test fixtures for one or more commands so they can be used with `/evolve` |
 | Evolve | `/evolve [command(s)] [--runs N] [--score N] [--model M] [--optimize O]` | Runs the self-evolution eval loop for one or more commands — executes against test fixtures, scores output, and iteratively improves prompts. Batch mode accepts a comma/space-separated list of commands |
 | Usage Text | `/usage-text` | Checks your current Claude usage/quota and next reset time by reading the Claude settings page via Selenium and displaying a progress bar |
 
