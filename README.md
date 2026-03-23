@@ -23,6 +23,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Audit | `/audit` | Reverse-engineers `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md` (Milestone 0) from an existing project's Swagger definitions, unit tests, and optional Gherkin — one set of files per VS project if a solution is present |
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
+| Evolve | `/evolve [command]` | Runs the self-evolution eval loop — executes a command against test fixtures, scores the output, and iteratively improves the command prompt |
 
 ## Setup
 
@@ -70,6 +71,11 @@ On Linux/macOS, add `.sh` files to `ps-commands/` instead — they are sourced t
 ```
 ai-skills/
   commands/       # Claude Code skill .md files
+  evals/          # Self-evolution eval framework
+    criteria/     # Per-command scoring rubrics (.md)
+    fixtures/     # Test inputs per command (subdirectory each)
+    results/      # Run logs with scores and token usage (.json)
+    run.py        # API-based eval runner with token tracking
   ps-commands/    # PowerShell / shell function .ps1 / .sh files
   install.ps1     # Windows installer
   install.sh      # Linux/macOS installer

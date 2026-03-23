@@ -48,4 +48,13 @@ Utility
 /estimate-time   (standalone)
 /browser-task    (standalone — generates prompt for Claude web extension)
 /to-browser      (uses same output format as → /browser-task)
+
+
+Evolution
+─────────
+/evolve [command]
+    └── runs → evals/run.py (API-based eval runner)
+    └── reads → evals/criteria/<command>.md (scoring rubric)
+    └── reads → evals/fixtures/<command>/ (test inputs)
+    └── modifies → commands/<command>.md (evolved prompt)
 ```

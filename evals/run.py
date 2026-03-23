@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""
+Eval runner for ai-skills commands.
+
+Runs a command against test fixtures, scores the output against criteria,
+and optionally loops to evolve the command prompt.
+
+Usage:
+    python evals/run.py feature                  # single eval run
+    python evals/run.py feature --evolve --runs 3 # evolve loop (3 iterations)
+    python evals/run.py feature --model claude-sonnet-4-6  # use a specific model
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+import anthropic
+
+EVALS_DIR = Path(__file__).resolve().parent
+ROOT_DIR = EVALS_DIR.parent
+COMMANDS_DIR = ROOT_DIR / "commands"
+CRITERIA_DIR = EVALS_DIR / "criteria"
+FIXTURES_DIR = EVALS_DIR / "fixtures"
+RESULTS_DIR = EVALS_DIR / "results"
+
+DEFAULT_MODEL = "claude-sonnet-4-6"
+
+
+def read_file(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def load_fixtures(command_name: str) -> dict[str, str]:
+    """Load all fixture files for a command into a dict of {filename: content}."""
+    fixture_dir = FIXTURES_DIR / command_name
+    if not fixture_dir.is_dir():
+        sys.exit(f"No fixtures found at {fixture_dir}")
+    return {f.name: read_file(f) for f in sorted(fixture_dir.iterdir()) if f.is_file()}
+
+
+def build_execution_prompt(command_content: str, fixtures: dict[str, str]) -> str:
+    """Build the prompt that simulates running the command against fixtures."""
+    fixture_block = "\n\n".join(
+        f"### {name}\n```\n{content}\n```" for name, content in fixtures.items()
+    )
+    return (
+        "You are Claude Code executing a skill command. The skill instructions and "
+        "the project files are provided below.\n\n"
+        "IMPORTANT: This is a non-interactive evaluation run. You cannot ask the user "
+        "questions. For any fields that would normally require user input, use a clear "
+        'placeholder like "[To be confirmed]" or "[TBC]".\n\n'
+        "Execute the skill and produce ONLY the output document — no preamble, no "
+        "explanation, just the document content.\n\n"
+        "## Skill Instructions\n\n"
+        f"{command_content}\n\n"
+        "## Project Files\n\n"
+        f"{fixture_block}"
+    )
+
+
+def build_scoring_prompt(criteria_content: str, command_output: str) -> str:
+    """Build the prompt for scoring the command output."""
+    return (
+        "You are an evaluator. Score the following command output against the "
+        "criteria below.\n\n"
+        "## Evaluation Criteria\n\n"
+        f"{criteria_content}\n\n"
+        "## Command Output to Score\n\n"
+        f"```\n{command_output}\n```"
+    )
+
+
+def build_evolution_prompt(
+    command_content: str,
+    scores: dict,
+    command_output: str,
+) -> str:
+    """Build the prompt for evolving the command based on scores."""
+    return (
+        "You are an expert prompt engineer improving a Claude Code skill command.\n\n"
+        "Below is the current skill definition, the output it produced, and the "
+        "evaluation scores with suggestions.\n\n"
+        "Your task: Edit the skill definition to improve the lowest-scoring "
+        "dimensions. Make targeted, minimal changes — do not rewrite from scratch. "
+        "Preserve the overall structure and intent of the skill.\n\n"
+        "Return ONLY the improved skill file content — no explanation, no markdown "
+        "fences, just the raw .md content.\n\n"
+        "## Current Skill Definition\n\n"
+        f"{command_content}\n\n"
+        "## Output Produced\n\n"
+        f"```\n{command_output}\n```\n\n"
+        "## Evaluation Scores\n\n"
+        f"```json\n{json.dumps(scores, indent=2)}\n```"
+    )
+
+
+def call_api(
+    client: anthropic.Anthropic,
+    prompt: str,
+    model: str,
+) -> tuple[str, dict]:
+    """Call the Anthropic API and return (response_text, usage_dict)."""
+    response = client.messages.create(
+        model=model,
+        max_tokens=8192,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    usage = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
+    }
+    text = response.content[0].text if response.content else ""
+    return text, usage
+
+
+def parse_scores(raw: str) -> dict:
+    """Extract JSON scores from the evaluator response."""
+    # Find JSON block — it may be wrapped in ```json ... ```
+    text = raw.strip()
+    if "```" in text:
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        text = text[start:end]
+    return json.loads(text)
+
+
+def save_result(command_name: str, iteration: int, result: dict) -> Path:
+    """Save a single iteration result to the results directory."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    filename = f"{command_name}_iter{iteration}_{timestamp}.json"
+    out_path = RESULTS_DIR / filename
+    out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    return out_path
+
+
+def run_single_eval(
+    client: anthropic.Anthropic,
+    command_name: str,
+    model: str,
+) -> dict:
+    """Run one eval cycle: execute command → score output. Returns result dict."""
+    command_path = COMMANDS_DIR / f"{command_name}.md"
+    criteria_path = CRITERIA_DIR / f"{command_name}.md"
+
+    if not command_path.exists():
+        sys.exit(f"Command not found: {command_path}")
+    if not criteria_path.exists():
+        sys.exit(f"Criteria not found: {criteria_path}")
+
+    command_content = read_file(command_path)
+    criteria_content = read_file(criteria_path)
+    fixtures = load_fixtures(command_name)
+
+    # Step 1: Execute the command
+    print("  Running command...", flush=True)
+    exec_prompt = build_execution_prompt(command_content, fixtures)
+    command_output, exec_usage = call_api(client, exec_prompt, model)
+
+    # Step 2: Score the output
+    print("  Scoring output...", flush=True)
+    score_prompt = build_scoring_prompt(criteria_content, command_output)
+    score_raw, score_usage = call_api(client, score_prompt, model)
+    scores = parse_scores(score_raw)
+
+    total_usage = {
+        "execution": exec_usage,
+        "scoring": score_usage,
+        "combined": {
+            "input_tokens": exec_usage["input_tokens"] + score_usage["input_tokens"],
+            "output_tokens": exec_usage["output_tokens"] + score_usage["output_tokens"],
+            "total_tokens": exec_usage["total_tokens"] + score_usage["total_tokens"],
+        },
+    }
+
+    return {
+        "command": command_name,
+        "model": model,
+        "command_content": command_content,
+        "command_output": command_output,
+        "scores": scores,
+        "token_usage": total_usage,
+    }
+
+
+def evolve_command(
+    client: anthropic.Anthropic,
+    command_name: str,
+    command_output: str,
+    scores: dict,
+    model: str,
+) -> tuple[str, dict]:
+    """Use the API to improve the command based on scores. Returns (new_content, usage)."""
+    command_path = COMMANDS_DIR / f"{command_name}.md"
+    command_content = read_file(command_path)
+
+    print("  Evolving command...", flush=True)
+    evolve_prompt = build_evolution_prompt(command_content, scores, command_output)
+    new_content, usage = call_api(client, evolve_prompt, model)
+    return new_content, usage
+
+
+def print_scores(scores: dict) -> None:
+    """Pretty-print the score breakdown."""
+    for key, val in scores.items():
+        if isinstance(val, dict) and "score" in val:
+            print(f"    {key}: {val['score']}/5 — {val.get('reasoning', '')}")
+    print(f"    TOTAL: {scores.get('total', '?')}/{scores.get('max_possible', '?')}")
+    suggestions = scores.get("suggestions", [])
+    if suggestions:
+        print("    Suggestions:")
+        for s in suggestions:
+            print(f"      - {s}")
+
+
+def print_usage(usage: dict) -> None:
+    """Pretty-print token usage."""
+    combined = usage.get("combined", usage)
+    print(
+        f"    Tokens — in: {combined['input_tokens']:,}  "
+        f"out: {combined['output_tokens']:,}  "
+        f"total: {combined['total_tokens']:,}"
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Eval runner for ai-skills commands")
+    parser.add_argument("command", help="Command name (e.g. 'feature')")
+    parser.add_argument(
+        "--evolve", action="store_true", help="Enable evolution loop"
+    )
+    parser.add_argument(
+        "--runs", type=int, default=3, help="Number of evolution iterations (default: 3)"
+    )
+    parser.add_argument(
+        "--model", default=DEFAULT_MODEL, help=f"Model to use (default: {DEFAULT_MODEL})"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print prompts without calling the API"
+    )
+    args = parser.parse_args()
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        sys.exit("Set ANTHROPIC_API_KEY environment variable before running.")
+
+    client = anthropic.Anthropic()
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    all_results = []
+    best_score = 0
+
+    for i in range(1, args.runs + 1 if args.evolve else 2):
+        print(f"\n{'='*60}")
+        print(f"  Iteration {i}" + (f" of {args.runs}" if args.evolve else ""))
+        print(f"{'='*60}")
+
+        if args.dry_run:
+            fixtures = load_fixtures(args.command)
+            command_content = read_file(COMMANDS_DIR / f"{args.command}.md")
+            print("\n[DRY RUN] Execution prompt length:",
+                  len(build_execution_prompt(command_content, fixtures)), "chars")
+            break
+
+        result = run_single_eval(client, args.command, args.model)
+        result["iteration"] = i
+
+        print("\n  Scores:")
+        print_scores(result["scores"])
+        print("\n  Token Usage:")
+        print_usage(result["token_usage"])
+
+        current_total = result["scores"].get("total", 0)
+
+        # Save result
+        out_path = save_result(args.command, i, result)
+        print(f"\n  Result saved to {out_path.name}")
+        all_results.append(result)
+
+        # Evolution step
+        if args.evolve and i < args.runs:
+            if current_total >= result["scores"].get("max_possible", 30):
+                print("\n  Perfect score — stopping early.")
+                break
+
+            new_content, evolve_usage = evolve_command(
+                client, args.command, result["command_output"],
+                result["scores"], args.model,
+            )
+
+            # Write the evolved command
+            command_path = COMMANDS_DIR / f"{args.command}.md"
+            command_path.write_text(new_content, encoding="utf-8")
+            print(f"  Command updated ({evolve_usage['total_tokens']:,} tokens)")
+
+            # Track cumulative usage
+            result["token_usage"]["evolution"] = evolve_usage
+
+            if current_total > best_score:
+                best_score = current_total
+
+    # Summary
+    if len(all_results) > 1:
+        print(f"\n{'='*60}")
+        print("  Evolution Summary")
+        print(f"{'='*60}")
+        for r in all_results:
+            total = r["scores"].get("total", "?")
+            tokens = r["token_usage"]["combined"]["total_tokens"]
+            print(f"    Iteration {r['iteration']}: {total}/{r['scores'].get('max_possible','?')} ({tokens:,} tokens)")
+
+        first = all_results[0]["scores"].get("total", 0)
+        last = all_results[-1]["scores"].get("total", 0)
+        delta = last - first
+        sign = "+" if delta > 0 else ""
+        print(f"\n    Score change: {sign}{delta} ({first} → {last})")
+
+        total_tokens = sum(
+            r["token_usage"]["combined"]["total_tokens"]
+            + r["token_usage"].get("evolution", {}).get("total_tokens", 0)
+            for r in all_results
+        )
+        print(f"    Total tokens used: {total_tokens:,}")
+
+
+if __name__ == "__main__":
+    main()
