@@ -73,6 +73,8 @@ If the user chose `tokens`, also pass `--optimize tokens`. If a minimum score th
 - **Phase 2 — Tokens:** If runs remain after phase 1, switch to passing `--optimize tokens` (with `--min-score` set to the score achieved at the end of phase 1 as the floor). Stop phase 2 early if the token reduction from the previous best is less than 5% (negligible — within natural run-to-run variance), or when runs are exhausted.
 - Show a phase header in the streamed output so the user can see when the switch happens.
 
+**Best-version tracking:** After each iteration, compare the score (or token count in phase 2) to the current best. If the new iteration is worse, revert the command file to the best version before the next iteration so evolution always builds on the best result so far, not a regression. Keep track of which iteration produced the best result.
+
 Stream the output to the user so they can watch progress.
 
 ---
@@ -88,8 +90,9 @@ After the loop completes:
    - Total score (raw and percentage, e.g. `26/30 — 87%`)
    - Token usage (input / output / total)
    - Score delta from previous iteration
-3. If the score improved, show the diff of changes made to the command file.
-4. If the score decreased on any iteration, flag it — the user may want to revert.
+3. Ensure the command file is set to the best-scoring version (it should already be, due to best-version tracking in Step 4, but verify).
+4. Show the diff of changes between the original and the best version.
+5. If the best version came from an earlier iteration (i.e. later runs regressed), note which iteration it was.
 
 ---
 
