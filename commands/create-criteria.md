@@ -61,15 +61,15 @@ You are scoring the output of the `/<command>` skill. <One sentence describing w
 
 For this evaluation, the skill was run in **non-interactive mode** — it could not ask the user follow-up questions<, so add any relevant caveats about what the scorer should be lenient on>.
 
-Score each dimension from 1 (poor) to 5 (excellent).
+Score each dimension from 1 (poor) to 10 (excellent).
 
 ## Dimensions
 
 ### 1. <Dimension Name>
 <What this dimension measures — one sentence>
 
-- 5 = <specific definition of excellent>
-- 3 = <specific definition of acceptable>
+- 10 = <specific definition of excellent>
+- 5 = <specific definition of acceptable>
 - 1 = <specific definition of poor>
 
 ### 2. <Dimension Name>
@@ -83,10 +83,10 @@ Respond with ONLY a JSON object, no other text:
 
 ` ` `json
 {
-  "<dimension_snake_case>": { "score": <1-5>, "reasoning": "<one sentence>" },
+  "<dimension_snake_case>": { "score": <1-10>, "reasoning": "<one sentence>" },
   ...
   "total": <sum of all scores>,
-  "max_possible": <N × 5>,
+  "max_possible": <N × 10>,
   "suggestions": ["<improvement 1>", "<improvement 2>"]
 }
 ` ` `
@@ -104,7 +104,7 @@ Respond with ONLY a JSON object, no other text:
   - `/commit` → "Conventional Format", "Scope Accuracy", "Body Detail"
   - `/story` → "Gherkin Syntax", "Acceptance Criteria Coverage", "Testability"
   - `/audit` → "Swagger Coverage", "Milestone Granularity", "Done-When Specificity"
-- **The 1/3/5 anchors must be concrete and distinguishable.** A scorer should be able to read them and know exactly what score to give.
+- **The 1/5/10 anchors must be concrete and distinguishable.** A scorer should be able to read them and know exactly what score to give.
 - **Dimension names in the JSON output must be snake_case versions of the heading names.**
 
 ---
@@ -130,12 +130,12 @@ After generating everything, show a summary per command:
 
 ```
 ✓ commit
-  Created: evals/criteria/commit.md (6 dimensions, max score 30)
+  Created: evals/criteria/commit.md (6 dimensions, max score 60)
   Created: evals/fixtures/commit/sample-diff.txt
   Ready for: /evolve commit
 
 ✓ story
-  Created: evals/criteria/story.md (5 dimensions, max score 25)
+  Created: evals/criteria/story.md (5 dimensions, max score 50)
   Created: evals/fixtures/story/spec.md
   Ready for: /evolve story
 ```

@@ -49,8 +49,8 @@ In single mode, ask the user if they didn't already pass flags:
 3. **Optimisation target?**
    - `score` (default) — maximise eval score, ignore token count
    - `tokens` — reduce token usage while keeping score above a threshold
-   - `both` — improve score AND reduce tokens simultaneously
-4. **Minimum score threshold?** (only when optimising for `tokens` or `both`; defaults to the iteration-1 score as a floor)
+   - `both` — two-phase: first maximise score (up to 100%, or `--score` target if given), then use remaining runs to minimise token usage
+4. **Minimum score threshold?** (only when optimising for `tokens`; defaults to the iteration-1 score as a floor)
 
 In batch mode, all parameters come from the flags — do not ask interactively.
 
@@ -64,9 +64,16 @@ Run the eval script:
 python3 evals/run.py <command> --evolve --runs <N> --model <model> --optimize <target>
 ```
 
-If the user chose `tokens` or `both`, also pass `--optimize tokens` (or `--optimize both`). If a minimum score threshold was specified, pass `--min-score <value>`.
+If the user chose `tokens`, also pass `--optimize tokens`. If a minimum score threshold was specified, pass `--min-score <value>`.
 
 **Early stop on `--score`:** After each iteration, read the result JSON to get `total` and `max_possible`. Calculate the percentage: `(total / max_possible) × 100`. If it meets or exceeds the `--score` threshold, stop iterating for this command and move on. This means `--score 85%` works consistently regardless of whether a command has 5, 6, or 7 dimensions.
+
+**Two-phase loop for `--optimize both`:**
+- **Phase 1 — Score:** Run iterations passing `--optimize score`. Stop phase 1 when the score reaches 100%, or when the `--score` target is met if one was given, or when runs are exhausted.
+- **Phase 2 — Tokens:** If runs remain after phase 1, switch to passing `--optimize tokens` (with `--min-score` set to the score achieved at the end of phase 1 as the floor). Stop phase 2 early if the token reduction from the previous best is less than 5% (negligible — within natural run-to-run variance), or when runs are exhausted.
+- Show a phase header in the streamed output so the user can see when the switch happens.
+
+**Best-version tracking:** After each iteration, compare the score (or token count in phase 2) to the current best. If the new iteration is worse, revert the command file to the best version before the next iteration so evolution always builds on the best result so far, not a regression. Keep track of which iteration produced the best result.
 
 Stream the output to the user so they can watch progress.
 
@@ -83,8 +90,9 @@ After the loop completes:
    - Total score (raw and percentage, e.g. `26/30 — 87%`)
    - Token usage (input / output / total)
    - Score delta from previous iteration
-3. If the score improved, show the diff of changes made to the command file.
-4. If the score decreased on any iteration, flag it — the user may want to revert.
+3. Ensure the command file is set to the best-scoring version (it should already be, due to best-version tracking in Step 4, but verify).
+4. Show the diff of changes between the original and the best version.
+5. If the best version came from an earlier iteration (i.e. later runs regressed), note which iteration it was.
 
 ---
 
