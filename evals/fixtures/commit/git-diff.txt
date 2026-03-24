@@ -1,0 +1,76 @@
+diff --git a/src/webhooks/sender.ts b/src/webhooks/sender.ts
+index 3a1f2b4..8c7e9d1 100644
+--- a/src/webhooks/sender.ts
++++ b/src/webhooks/sender.ts
+@@ -12,7 +12,9 @@ export async function sendWebhook(url: string, payload: object): Promise<void> {
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(payload),
+   });
+-  if (!response.ok) {
+-    throw new Error(`Webhook failed: ${response.status}`);
++  if (!response.ok && response.status >= 500) {
++    await scheduleRetry(url, payload, response.status);
++  } else if (!response.ok) {
++    throw new Error(`Webhook rejected (${response.status}): not retryable`);
+   }
+ }
+
+diff --git a/src/webhooks/retry.ts b/src/webhooks/retry.ts
+new file mode 100644
+index 0000000..a4b2c3e
+--- /dev/null
++++ b/src/webhooks/retry.ts
+@@ -0,0 +1,38 @@
++const MAX_RETRIES = 5;
++const BASE_DELAY_MS = 1000;
++
++interface RetryEntry {
++  url: string;
++  payload: object;
++  attempt: number;
++  nextRetryAt: number;
++}
++
++const retryQueue: RetryEntry[] = [];
++
++export async function scheduleRetry(
++  url: string,
++  payload: object,
++  statusCode: number,
++): Promise<void> {
++  const attempt = 1;
++  const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
++  retryQueue.push({
++    url,
++    payload,
++    attempt,
++    nextRetryAt: Date.now() + delay,
++  });
++  console.log(
++    `Scheduled retry #${attempt} for ${url} (status ${statusCode}) in ${delay}ms`,
++  );
++}
++
++export async function processRetryQueue(): Promise<void> {
++  const now = Date.now();
++  const due = retryQueue.filter((e) => e.nextRetryAt <= now);
++  for (const entry of due) {
++    // re-attempt the webhook send
++    const idx = retryQueue.indexOf(entry);
++    retryQueue.splice(idx, 1);
++  }
++}
+
+diff --git a/commands/webhook-health.md b/commands/webhook-health.md
+new file mode 100644
+index 0000000..f1c8a2e
+--- /dev/null
++++ b/commands/webhook-health.md
+@@ -0,0 +1,8 @@
++Check the health of configured webhook endpoints.
++
++**Steps:**
++1. Read the webhook configuration from `config/webhooks.json`.
++2. Send a HEAD request to each endpoint.
++3. Report which endpoints are up (2xx) and which are down.
++4. If any are down, suggest checking the retry queue.

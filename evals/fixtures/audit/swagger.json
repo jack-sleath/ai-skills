@@ -1,0 +1,131 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "BookingService API",
+    "version": "1.0.0",
+    "description": "Internal API for managing room bookings and availability"
+  },
+  "paths": {
+    "/api/rooms": {
+      "get": {
+        "tags": ["Rooms"],
+        "summary": "List all available rooms",
+        "parameters": [
+          { "name": "floor", "in": "query", "schema": { "type": "integer" }, "description": "Filter by floor number" },
+          { "name": "capacity", "in": "query", "schema": { "type": "integer" }, "description": "Minimum seat capacity" }
+        ],
+        "responses": {
+          "200": { "description": "Array of room objects" }
+        }
+      },
+      "post": {
+        "tags": ["Rooms"],
+        "summary": "Create a new room",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "floor": { "type": "integer" },
+                  "capacity": { "type": "integer" },
+                  "hasVideoConf": { "type": "boolean" }
+                },
+                "required": ["name", "floor", "capacity"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Room created" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Room name already exists" }
+        }
+      }
+    },
+    "/api/rooms/{id}": {
+      "get": {
+        "tags": ["Rooms"],
+        "summary": "Get room details by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Room object" },
+          "404": { "description": "Room not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Rooms"],
+        "summary": "Delete a room",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Room deleted" },
+          "404": { "description": "Room not found" },
+          "409": { "description": "Room has future bookings" }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "List bookings for a date range",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "roomId", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Array of booking objects" },
+          "400": { "description": "Invalid date range" }
+        }
+      },
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Create a new booking",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roomId": { "type": "string", "format": "uuid" },
+                  "userId": { "type": "string", "format": "uuid" },
+                  "start": { "type": "string", "format": "date-time" },
+                  "end": { "type": "string", "format": "date-time" },
+                  "title": { "type": "string" },
+                  "attendees": { "type": "integer" }
+                },
+                "required": ["roomId", "userId", "start", "end", "title"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Booking created" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Time slot conflict" }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "delete": {
+        "tags": ["Bookings"],
+        "summary": "Cancel a booking",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Booking cancelled" },
+          "404": { "description": "Booking not found" },
+          "400": { "description": "Cannot cancel past bookings" }
+        }
+      }
+    }
+  }
+}

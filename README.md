@@ -23,6 +23,9 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Audit | `/audit` | Reverse-engineers `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md` (Milestone 0) from an existing project's Swagger definitions, unit tests, and optional Gherkin — one set of files per VS project if a solution is present |
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
+| Create Criteria | `/create-criteria [command(s)]` | Scaffolds eval criteria and test fixtures for one or more commands so they can be used with `/evolve` |
+| Evolve | `/evolve [command(s)] [--runs N] [--score N] [--model M] [--optimize O]` | Runs the self-evolution eval loop for one or more commands — executes against test fixtures, scores output, and iteratively improves prompts. Batch mode accepts a comma/space-separated list of commands |
+| Usage Text | `/usage-text` | Checks your current Claude usage/quota and next reset time by reading the Claude settings page via Selenium and displaying a progress bar |
 
 ## Setup
 
@@ -65,11 +68,89 @@ The install script adds a profile loader that auto-sources all `.ps1` files in `
 
 On Linux/macOS, add `.sh` files to `ps-commands/` instead — they are sourced the same way via `~/.bashrc` / `~/.zshrc`.
 
+## Self-Evolving Skills
+
+The `/evolve` command runs an automated eval loop that scores a skill's output against a rubric and iteratively rewrites the skill prompt to improve it. Think of it as automated prompt engineering.
+
+### Quick Start
+
+1. **Install the Python dependency:**
+   ```bash
+   pip install anthropic
+   ```
+
+2. **Set your API key:**
+   ```bash
+   export ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+3. **Run the evolve skill** (the `/feature` command has eval support out of the box):
+   ```
+   /evolve feature
+   ```
+   Claude will ask you for iteration count, model, and optimisation target, then run the loop.
+
+4. **Or run the eval script directly** (bypasses the interactive skill):
+   ```bash
+   python3 evals/run.py feature --evolve --runs 3
+   ```
+
+### Adding Eval Support to Another Command
+
+To make any other skill self-evolvable, create two things:
+
+1. **A criteria file** — `evals/criteria/<command>.md`
+   - Defines scoring dimensions (each scored 1–5) that describe what good output looks like.
+   - Must end with an output format section specifying a JSON schema for scores.
+   - See `evals/criteria/feature.md` for a working example.
+
+2. **A fixtures directory** — `evals/fixtures/<command>/`
+   - Contains sample project files that simulate realistic input the command would normally see.
+   - These are fed to the API in place of a real project, so they should be representative.
+   - See `evals/fixtures/feature/` for a working example (contains `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md`).
+
+Once both exist, `/evolve <command>` will pick them up automatically.
+
+### How It Works
+
+Each iteration runs a three-stage pipeline:
+
+```
+1. EXECUTE — Feed the skill prompt + fixtures to the API → get output
+2. SCORE   — Feed the output + criteria to the API → get scores (JSON)
+3. EVOLVE  — Feed the skill + scores + output to the API → get improved skill prompt
+```
+
+The evolved prompt is written back to `commands/<command>.md`. The original can always be restored with `git checkout commands/<command>.md`.
+
+### Optimisation Modes
+
+| Mode | What it does |
+|---|---|
+| `score` (default) | Maximise eval score — fix the lowest-scoring dimensions |
+| `tokens` | Reduce token usage while keeping score above a floor |
+| `both` | Improve score AND reduce tokens in one pass |
+
+**Recommended workflow:** Run `score` first until the score plateaus, then switch to `tokens` to make the prompt leaner without losing quality.
+
+### Commands Currently Supporting Eval
+
+| Command | Criteria | Fixtures |
+|---|---|---|
+| `/feature` | `evals/criteria/feature.md` | `evals/fixtures/feature/` |
+
+For full details on the eval framework, see [`evals/README.md`](evals/README.md).
+
 ## Structure
 
 ```
 ai-skills/
   commands/       # Claude Code skill .md files
+  evals/          # Self-evolution eval framework
+    criteria/     # Per-command scoring rubrics (.md)
+    fixtures/     # Test inputs per command (subdirectory each)
+    results/      # Run logs with scores and token usage (.json)
+    run.py        # API-based eval runner with token tracking
   ps-commands/    # PowerShell / shell function .ps1 / .sh files
   install.ps1     # Windows installer
   install.sh      # Linux/macOS installer

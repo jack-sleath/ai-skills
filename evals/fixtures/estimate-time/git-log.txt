@@ -1,0 +1,21 @@
+2026-03-20 09:15:32 +0000 alice@example.com Alice Chen Initial project scaffold with Next.js and Prisma
+2026-03-20 09:42:18 +0000 alice@example.com Alice Chen Add database schema for users and items
+2026-03-20 10:08:45 +0000 alice@example.com Alice Chen Configure NextAuth with email provider
+2026-03-20 14:30:12 +0000 bob@example.com Bob Martinez Add item listing page with search
+2026-03-20 14:55:03 +0000 bob@example.com Bob Martinez Add image upload to S3
+2026-03-20 15:22:41 +0000 bob@example.com Bob Martinez Fix thumbnail generation for uploaded images
+2026-03-21 08:50:00 +0000 alice@example.com Alice Chen Add borrow request model and API routes
+2026-03-21 09:18:22 +0000 alice@example.com Alice Chen Add notification emails for borrow requests
+2026-03-21 09:45:10 +0000 alice@example.com Alice Chen Fix email template rendering bug
+2026-03-21 10:30:55 +0000 alice@example.com Alice Chen Add request approval/rejection flow
+2026-03-21 14:00:00 +0000 bob@example.com Bob Martinez Add user profile page
+2026-03-21 16:12:33 +0000 bob@example.com Bob Martinez Add messaging between users
+2026-03-22 09:00:15 +0000 alice@example.com Alice Chen Add lending ledger to track active borrows
+2026-03-22 09:35:42 +0000 alice@example.com Alice Chen Add return confirmation flow
+2026-03-22 11:45:00 +0000 charlie@example.com Charlie Park Merge branch 'feature/auth' into main
+2026-03-22 13:20:00 +0000 bob@example.com Bob Martinez Add responsive CSS for mobile browsers
+2026-03-22 13:48:17 +0000 bob@example.com Bob Martinez Fix navigation menu on small screens
+2026-03-22 14:15:30 +0000 bob@example.com Bob Martinez Add PWA manifest and service worker
+2026-03-23 09:10:00 +0000 alice@example.com Alice Chen Add rate limiting to API endpoints
+2026-03-23 10:55:22 +0000 charlie@example.com Charlie Park Add CI pipeline with GitHub Actions
+2026-03-23 11:20:45 +0000 charlie@example.com Charlie Park Add deployment config for Fly.io
