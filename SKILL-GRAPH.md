@@ -64,4 +64,5 @@ Evolution
     └── reads → evals/fixtures/<command>/ (test inputs)
     └── modifies → commands/<command>.md (evolved prompt)
     └── runs → tools/read_usage.py (live quota check, same as /usage-text)
+    └── spawns → Agent (worktree, one per command in parallel batch mode)
 ```

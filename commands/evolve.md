@@ -156,6 +156,7 @@ Batch evolve plan:
   Runs:      5 per command (or until score ≥ 85%)
   Model:     claude-sonnet-4-6
   Optimize:  score
+  Execution: parallel (agent teams)   ← or "sequential" if env var not set
 
   Skipped:   audit (no criteria file)
 
@@ -163,6 +164,36 @@ Proceed? (y/n)
 ```
 
 ### Step B2 — Run the batch
+
+**Check for parallel mode:** Read the environment variable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`. If it is set to `1`, use **parallel execution** (Step B2a). Otherwise, fall back to **sequential execution** (Step B2b).
+
+Show which mode was selected:
+```
+Mode: parallel (agent teams enabled) — spawning N agents
+```
+or
+```
+Mode: sequential (agent teams not enabled)
+```
+
+#### Step B2a — Parallel execution (agent teams)
+
+Use the Agent tool to spawn one agent per ready command **in a single message** (so they all launch concurrently). Each agent runs in a worktree so they don't conflict on the command file.
+
+For each ready command, spawn an agent with:
+- `subagent_type`: `general-purpose`
+- `isolation`: `worktree`
+- `description`: `Evolve <command>`
+- `prompt`: A complete, self-contained prompt that tells the agent to:
+  1. Run the eval loop (Step 4) for that single command with the batch parameters (runs, model, optimize target, score threshold).
+  2. After the loop completes, collect the results summary (Step 5): iteration scores, token usage, best iteration, and the final diff.
+  3. Return the results as structured text so the parent can parse them for the batch summary table.
+
+The prompt must include all the context the agent needs (command name, flags, the full eval loop instructions from Step 4, and best-version tracking rules) because agents start fresh with no prior context.
+
+After all agents complete, collect their results. For each command, show the per-command summary table (Step 5) in the order the commands were originally listed.
+
+#### Step B2b — Sequential execution (fallback)
 
 For each ready command, in order:
 
