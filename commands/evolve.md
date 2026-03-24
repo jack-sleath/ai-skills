@@ -8,7 +8,7 @@ Check the arguments the user passed:
 
 - **Single command** — e.g. `/evolve feature` → single mode (Steps 1–6 as before)
 - **Multiple commands** — e.g. `/evolve feature,commit,story --runs 5` or `/evolve feature commit story --score 4.0` → batch mode (go to Step B1)
-- **No arguments** — ask the user to pick a command, then single mode
+- **No arguments** — run the interactive wizard (Step W), then continue to Step 2
 
 ### Argument parsing
 
@@ -20,6 +20,71 @@ Check the arguments the user passed:
 | `--optimize O` | `score`, `tokens`, or `both` | `score` |
 
 Commands can be separated by commas or spaces. The flags apply to every command in the batch.
+
+---
+
+## Step W — Interactive wizard (no-args mode only)
+
+Run this step only when the user invoked `/evolve` with no arguments. Ask each question in sequence, waiting for the user's answer before moving on. Keep the tone concise — show the default in brackets so the user can just press Enter to accept it.
+
+**W1 — Pick a command**
+
+List every file in `commands/` (excluding `evolve.md` itself) and present a numbered menu. Ask: `Which command would you like to evolve?`
+
+After the user selects a command, use it as the target for the rest of the wizard and for Steps 2–6.
+
+**W2 — Iterations**
+
+Ask: `How many iterations? [3]`
+
+Accept a number or blank (= 3). This sets `--runs`.
+
+**W3 — Model**
+
+Ask: `Which model? [claude-sonnet-4-6]`
+Show the two common options:
+- `1` — `claude-sonnet-4-6` (faster, cheaper — good for iteration)
+- `2` — `claude-opus-4-6` (higher quality — good for final runs)
+- or type a custom model ID
+
+Accept `1`, `2`, a model ID string, or blank (= `claude-sonnet-4-6`).
+
+**W4 — Optimisation target**
+
+Ask: `What should the evolution optimise for?`
+- `1` — `score` (default) — maximise eval score
+- `2` — `tokens` — reduce token usage while keeping score above a floor
+- `3` — `both` — phase 1: maximise score; phase 2: reduce tokens
+
+**W5 — Score threshold (optional)**
+
+Ask: `Stop early when score reaches % (leave blank to run all iterations):`
+
+Accept a number like `85` or blank (= no threshold). If provided, set `--score <N>%`.
+
+**W6 — Minimum score floor (only when W4 = tokens)**
+
+Ask: `Minimum score to maintain while optimising tokens? (leave blank to use iteration-1 score as floor):`
+
+Accept a percentage number or blank.
+
+**W7 — Confirm**
+
+Show a summary of all collected settings before proceeding:
+
+```
+Ready to evolve:
+  Command:    <command>
+  Iterations: <N>
+  Model:      <model>
+  Optimise:   <target>
+  Stop at:    <score threshold or "—">
+  Min score:  <floor or "iteration-1 floor">
+
+Proceed? (y/n)
+```
+
+If the user says `n`, restart from W1. If `y`, continue to Step 2 using the collected settings.
 
 ---
 
@@ -41,7 +106,9 @@ Also verify that the `claude` CLI is available on the PATH. If not, tell the use
 
 ---
 
-## Step 3 — Ask for parameters (single mode only)
+## Step 3 — Ask for parameters (single mode only, args provided)
+
+Skip this step if the user ran the wizard (Step W) — all parameters are already collected.
 
 In single mode, ask the user if they didn't already pass flags:
 1. **How many iterations?** (default: 3)
