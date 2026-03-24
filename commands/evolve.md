@@ -70,7 +70,7 @@ If the user chose `tokens`, also pass `--optimize tokens`. If a minimum score th
 
 **Two-phase loop for `--optimize both`:**
 - **Phase 1 — Score:** Run iterations passing `--optimize score`. Stop phase 1 when the score reaches 100%, or when the `--score` target is met if one was given, or when runs are exhausted.
-- **Phase 2 — Tokens:** If runs remain after phase 1, switch to passing `--optimize tokens` (with `--min-score` set to the score achieved at the end of phase 1 as the floor). Stop phase 2 early if token usage fails to improve between two consecutive iterations (stagnation), or when runs are exhausted.
+- **Phase 2 — Tokens:** If runs remain after phase 1, switch to passing `--optimize tokens` (with `--min-score` set to the score achieved at the end of phase 1 as the floor). Stop phase 2 early if the token reduction from the previous best is less than 5% (negligible — within natural run-to-run variance), or when runs are exhausted.
 - Show a phase header in the streamed output so the user can see when the switch happens.
 
 Stream the output to the user so they can watch progress.
