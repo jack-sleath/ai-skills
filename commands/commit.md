@@ -2,39 +2,28 @@ Review the current changes and create a local git commit with a well-crafted mes
 
 **Steps:**
 
-1. Run `git status` to see what files are staged/unstaged.
-2. Run `git diff HEAD` to understand what has actually changed.
-3. Check whether the diff touches any files in `commands/`:
-   - If a skill file was **added or removed**, verify `README.md` has been updated to reflect the change. If not, update it before proceeding.
-   - If a skill file was **added, removed, or changed in a way that affects how skills delegate to or depend on each other**, verify `SKILL-GRAPH.md` has been updated to reflect the change. If not, update it before proceeding.
-4. Scan the diff for encoding corruption (mojibake sequences like `Ã¢â‚¬"`, `Ã¢â‚¬â„¢`, `ÃƒÂ©`, etc.). If any are found:
-   - Draft a tentative commit message describing what the change *would* commit (e.g. "Fix encoding in commit.md") so the user knows what to expect after remediation.
-   - If the corrupted file is in `commands/`, also note whether `README.md` and `SKILL-GRAPH.md` will need to be verified once encoding is fixed.
-   - **Block the commit and ask the user to fix the encoding before proceeding** — do not commit corrupted content.
-5. Scan the diff for secrets or sensitive content: API keys, tokens, passwords, private keys, `.env` files, credential files, or any pattern that looks like a secret (e.g. long hex/base64 strings assigned to variables like `KEY=`, `TOKEN=`, `SECRET=`). If any are found, block the commit and tell the user which file and pattern triggered the check.
-6. Analyse the changes and draft a commit message:
-   - First line: short imperative summary (max 72 chars), e.g. "Add retry logic to API client"
-   - If the change warrants it, add a blank line then a short body (2-4 lines) explaining *why*, not just what — name the specific module or component involved where relevant
-   - Notable issues discovered during the commit process (e.g. files skipped, manual steps needed) belong in the commit body, not only in CLI output
-   - Do not include filler like “various improvements” or “minor changes” — be specific
-7. Stage all modified tracked files with `git add -u`, unless the user specified particular files.
-8. Commit locally using the drafted message. Pass the message via heredoc to preserve formatting:
+1. Run `git status` and `git diff HEAD` to understand what has changed.
+2. If nothing is staged or modified, report "nothing to commit" and stop.
+3. Check `commands/` changes:
+   - New/removed skill file → verify `README.md` is updated. If not, update it.
+   - Skill delegation/dependency changed → verify `SKILL-GRAPH.md` is updated. If not, update it.
+4. Scan the diff for encoding corruption (mojibake: `Ã¢â‚¬"`, `Ã¢â‚¬â„¢`, `ÃƒÂ©`, etc.). If found: state the tentative commit message, block the commit, ask the user to fix it. One sentence on remediation. Don't restate examples.
+5. Scan the diff for secrets: API keys, tokens, passwords, private keys, `.env` files, or patterns like `KEY=`, `TOKEN=`, `SECRET=` assigned to long hex/base64 strings. If found: block the commit and name the file and pattern.
+6. Draft the commit message:
+   - Subject: imperative, ≤72 chars, specific (not “various improvements”)
+   - Body (if warranted): 2–4 lines explaining *why*, naming the component. Include any notable issues (skipped files, manual steps needed).
+7. Stage with `git add -u` (or user-specified files), then commit via heredoc:
    ```
    git commit -m "$(cat <<'EOF'
-   <subject line>
+   <subject>
 
    <optional body>
    EOF
    )"
    ```
-9. Confirm the commit succeeded with `git log -1 --oneline`.
+8. Confirm with `git log -1 --oneline`.
 
 **Rules:**
-- Never push to the remote.
-- Never use `--no-verify`.
-- Never commit files that look like secrets (`.env`, credential files, private keys, API tokens).
-- Never commit files containing encoding corruption — block and ask the user to fix first. When blocking, always provide a tentative commit message so the user knows what will be committed after remediation.
-- When blocking a commit on a file in `commands/`, remind the user that `README.md` and `SKILL-GRAPH.md` may also need to be verified once the issue is resolved.
-- If nothing is staged and nothing is modified, report that there is nothing to commit.
-- Output only what is necessary: skip meta-commentary about eval fixtures or execution context. Do not add closing paragraphs restating the working-tree state.
-- When reporting a blocked commit, state the issue and tentative message once — do not restate mojibake examples in the fix instructions. Keep the remediation note to one sentence.
+- Never push, never `--no-verify`, never commit secrets or encoding corruption.
+- Output only what's necessary — no closing paragraphs restating tree state, no meta-commentary.
+- When blocking, state the issue and tentative message once.

@@ -165,15 +165,7 @@ After the loop completes:
 
 ## Step 5b — Usage check
 
-After showing the results table, check how much of the user's Claude quota was consumed by running `/usage-text`. This delegates to `tools/read_usage.py` which loads the Claude usage page via Selenium and returns the rendered page content.
-
-Run the script directly (no need to invoke the full `/usage-text` skill):
-
-```bash
-python3 tools/read_usage.py --html
-```
-
-Parse the JSON output. Read `page_text` (and `page_html` if needed) to find the **current usage percentage**. Ignore reset time for now.
+After showing the results table, check how much of the user's Claude quota was consumed by invoking the `/usage-text` skill to fetch the current usage percentage. Ignore reset time for now.
 
 Then display a box combining the API token totals from the eval results with the live quota reading:
 
@@ -188,9 +180,9 @@ Then display a box combining the API token totals from the eval results with the
 ```
 
 - **API tokens this run** — sum the `total_tokens` from every iteration's result JSON (the `combined` and `evolution` usage fields).
-- **Account quota** — the usage percentage read from the page. Progress bar should be 28 characters wide (`█` for used, `░` for remaining).
+- **Account quota** — the usage percentage from `/usage-text`. Progress bar should be 28 characters wide (`█` for used, `░` for remaining).
 
-If the script fails (e.g. Chrome is open, Selenium not installed), show the API token total and note that the live usage check was skipped, with a hint to try `/usage-text` manually.
+If the usage check fails, show the API token total and note that the live usage check was skipped, with a hint to try `/usage-text` manually.
 
 ---
 
