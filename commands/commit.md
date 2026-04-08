@@ -2,17 +2,21 @@ Review the current changes and create a local git commit with a well-crafted mes
 
 **Steps:**
 
-1. Run `git status` and `git diff HEAD` to understand what has changed.
-2. If nothing is staged or modified, report "nothing to commit" and stop.
-3. Check `commands/` changes:
-   - New/removed skill file → verify `README.md` is updated. If not, update it.
-   - Skill delegation/dependency changed → verify `SKILL-GRAPH.md` is updated. If not, update it.
-4. Scan the diff for encoding corruption (mojibake: `Ã¢â‚¬"`, `Ã¢â‚¬â„¢`, `ÃƒÂ©`, etc.). If found: state the tentative commit message, block the commit, ask the user to fix it. One sentence on remediation. Don't restate examples.
-5. Scan the diff for secrets: API keys, tokens, passwords, private keys, `.env` files, or patterns like `KEY=`, `TOKEN=`, `SECRET=` assigned to long hex/base64 strings. If found: block the commit and name the file and pattern.
-6. Draft the commit message:
-   - Subject: imperative, ≤72 chars, specific (not “various improvements”)
+1. Run the pre-commit scanner to check for issues:
+   ```
+   python ~/.claude/scripts/commit_scan.py
+   ```
+   - If it reports **BLOCKED**: state the tentative commit message, show the scanner output, and ask the user to fix the issues. Do not commit.
+   - If it reports **Skill file changes detected**: verify `README.md` and `SKILL-GRAPH.md` are updated. If not, update them before committing.
+   - If it reports **OK**: proceed.
+
+2. Run `git diff HEAD` to understand the changes.
+
+3. Draft the commit message:
+   - Subject: imperative, ≤72 chars, specific (not "various improvements")
    - Body (if warranted): 2–4 lines explaining *why*, naming the component. Include any notable issues (skipped files, manual steps needed).
-7. Stage with `git add -u` (or user-specified files), then commit via heredoc:
+
+4. Stage with `git add -u` (or user-specified files), then commit via heredoc:
    ```
    git commit -m "$(cat <<'EOF'
    <subject>
@@ -21,7 +25,8 @@ Review the current changes and create a local git commit with a well-crafted mes
    EOF
    )"
    ```
-8. Confirm with `git log -1 --oneline`.
+
+5. Confirm with `git log -1 --oneline`.
 
 **Rules:**
 - Never push, never `--no-verify`, never commit secrets or encoding corruption.

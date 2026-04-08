@@ -31,6 +31,24 @@ if (-not $ProfileOnly) {
         }
         Write-Host "Done. $($skills.Count) Claude skill(s) installed."
     }
+
+    # Copy helper scripts
+    $scriptsSource = Join-Path $repoRoot "scripts"
+    $scriptsDest = Join-Path $HOME ".claude\scripts"
+
+    if (Test-Path $scriptsSource) {
+        if (-not (Test-Path $scriptsDest)) {
+            New-Item -ItemType Directory -Path $scriptsDest -Force | Out-Null
+            Write-Host "Created $scriptsDest"
+        }
+
+        $scripts = Get-ChildItem -Path $scriptsSource -Filter "*.py"
+        foreach ($script in $scripts) {
+            Copy-Item -Path $script.FullName -Destination $scriptsDest -Force
+            Write-Host "Copied (Script): $($script.Name)"
+        }
+        Write-Host "Done. $($scripts.Count) helper script(s) installed."
+    }
 }
 
 # ── PowerShell commands ─────────────────────────────────────────────────────
