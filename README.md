@@ -20,12 +20,12 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Ship | `/ship` | Implements all incomplete milestones in sequence — after each one, raises a PR to main and immediately starts the next |
 | Feedback | `/feedback` | Translates feedback or a change request into a plan — appends to `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md`, and creates a `<CHANGE-TITLE>_FEATURE.md` |
 | Merge From | `/merge-from <branch>` | Fetches a branch from origin and merges it into the current active branch |
+| Tidy Branches | `/tidy-branches` | Switches to main/master, fetches latest, and deletes all local branches that have been pushed to the remote |
 | Audit | `/audit` | Reverse-engineers `ACCEPTANCE_CRITERIA.md` and `MILESTONES.md` (Milestone 0) from an existing project's Swagger definitions, unit tests, and optional Gherkin — one set of files per VS project if a solution is present |
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
 | Create Criteria | `/create-criteria [command(s)]` | Scaffolds eval criteria and test fixtures for one or more commands so they can be used with `/evolve` |
 | Evolve | `/evolve [command(s)] [--runs N] [--score N] [--model M] [--optimize O]` | Runs the self-evolution eval loop for one or more commands — executes against test fixtures, scores output, and iteratively improves prompts. Batch mode accepts a comma/space-separated list of commands |
-| Usage Text | `/usage-text` | Checks your current Claude usage/quota and next reset time by reading the Claude settings page via Selenium and displaying a progress bar |
 
 ## Setup
 

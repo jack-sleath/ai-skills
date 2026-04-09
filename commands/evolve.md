@@ -163,27 +163,6 @@ After the loop completes:
 
 ---
 
-## Step 5b — Usage check
-
-After showing the results table, check how much of the user's Claude quota was consumed by invoking the `/usage-text` skill to fetch the current usage percentage. Ignore reset time for now.
-
-Then display a box combining the API token totals from the eval results with the live quota reading:
-
-```
-┌─ Usage Summary ──────────────────────────────┐
-│ API tokens this run:  45,230                  │
-│                                               │
-│ Account quota:                                │
-│ ██████████████░░░░░░░░░░░░░░  42% used       │
-│                                               │
-└───────────────────────────────────────────────┘
-```
-
-- **API tokens this run** — sum the `total_tokens` from every iteration's result JSON (the `combined` and `evolution` usage fields).
-- **Account quota** — the usage percentage from `/usage-text`. Progress bar should be 28 characters wide (`█` for used, `░` for remaining).
-
-If the usage check fails, show the API token total and note that the live usage check was skipped, with a hint to try `/usage-text` manually.
-
 ---
 
 ## Step 6 — Confirm or revert
