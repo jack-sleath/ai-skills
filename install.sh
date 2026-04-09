@@ -26,6 +26,23 @@ else
     echo "Done. $count Claude skill(s) installed."
 fi
 
+# ── Helper scripts ─────────────────────────────────────────────────────────
+SCRIPTS_SOURCE="$REPO_ROOT/scripts"
+SCRIPTS_DEST="$HOME/.claude/scripts"
+
+if [ -d "$SCRIPTS_SOURCE" ]; then
+    mkdir -p "$SCRIPTS_DEST"
+    scount=0
+    for script in "$SCRIPTS_SOURCE"/*.py; do
+        [ -f "$script" ] || continue
+        name="$(basename "$script")"
+        cp "$script" "$SCRIPTS_DEST/$name"
+        echo "Copied (Script): $name"
+        ((scount++))
+    done
+    echo "Done. $scount helper script(s) installed."
+fi
+
 # ── Shell commands ──────────────────────────────────────────────────────────
 PS_COMMANDS_SOURCE="$REPO_ROOT/ps-commands"
 MARKER="AI Skills - shell commands loader"
