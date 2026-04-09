@@ -172,7 +172,7 @@ List any areas that appear untested or undocumented based on the audit:
 ---
 
 ## Milestone 1 — <Next planned milestone>
-> ⚠️ This milestone has not been planned yet. Run `/invest-idea` or `/feedback` to define the next milestone.
+> ⚠️ This milestone has not been planned yet.
 ```
 
 ---
@@ -183,7 +183,3 @@ After writing all files, tell the user:
 - Which files were created and where
 - How many endpoints and tests were found per project
 - What gaps or assumptions were flagged for manual review
-- Suggest next steps:
-  - `/feedback` to plan changes or new features
-  - `/milestone` to begin implementing the next milestone
-  - `/feature` to generate a full FEATURE.md once milestones are defined
