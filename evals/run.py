@@ -319,7 +319,24 @@ def run_single_eval(command_name: str, model: str) -> dict:
     print("  Scoring output...", flush=True)
     score_prompt = build_scoring_prompt(criteria_content, command_output)
     score_raw, score_usage = call_claude(score_prompt, model)
-    scores = parse_scores(score_raw)
+    try:
+        scores = parse_scores(score_raw)
+    except (json.JSONDecodeError, ValueError):
+        print("  Score parse failed, retrying...", flush=True)
+        repair_prompt = (
+            "The following text was supposed to be a valid JSON object but could "
+            "not be parsed. Return ONLY the corrected JSON object:\n\n"
+            f"{score_raw}"
+        )
+        score_raw2, retry_usage = call_claude(repair_prompt, model)
+        score_usage = {
+            k: score_usage[k] + retry_usage[k]
+            for k in ("input_tokens", "output_tokens", "total_tokens")
+        }
+        score_usage["cost_usd"] = (
+            score_usage.get("cost_usd", 0) + retry_usage.get("cost_usd", 0)
+        )
+        scores = parse_scores(score_raw2)
 
     total_usage = {
         "execution": exec_usage,
@@ -371,9 +388,11 @@ def evolve_command(
 
 def print_scores(scores: dict) -> None:
     """Pretty-print the score breakdown."""
-    for key, val in scores.items():
-        if isinstance(val, dict) and "score" in val:
-            print(f"    {key}: {val['score']}/5 — {val.get('reasoning', '')}")
+    dims = {k: v for k, v in scores.items() if isinstance(v, dict) and "score" in v}
+    num_dims = len(dims) or 1
+    max_per = scores.get("max_possible", num_dims * 10) // num_dims
+    for key, val in dims.items():
+        print(f"    {key}: {val['score']}/{max_per} — {val.get('reasoning', '')}")
     print(f"    TOTAL: {scores.get('total', '?')}/{scores.get('max_possible', '?')}")
     suggestions = scores.get("suggestions", [])
     if suggestions:
@@ -420,6 +439,12 @@ def main() -> None:
         help="Minimum total score to maintain when --optimize is tokens or both",
     )
     parser.add_argument(
+        "--score",
+        type=float,
+        default=None,
+        help="Stop early when score reaches this percentage (e.g. 85)",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="Print prompts without calling the CLI"
     )
     args = parser.parse_args()
@@ -431,8 +456,21 @@ def main() -> None:
     criteria_path = CRITERIA_DIR / f"{args.command}.md"
     criteria_content = read_file(criteria_path) if criteria_path.exists() else ""
 
+    command_path = COMMANDS_DIR / f"{args.command}.md"
+    original_content = read_file(command_path)
+
     all_results = []
     best_score = 0
+    best_content = original_content
+    best_iter = 0
+
+    # Phase tracking for --optimize both
+    phase = 1
+    current_optimize = "score" if args.optimize == "both" else args.optimize
+    min_score = args.min_score
+
+    if args.optimize == "both":
+        print("\n  -- Phase 1: Score optimisation --")
 
     for i in range(1, args.runs + 1 if args.evolve else 2):
         print(f"\n{'='*60}")
@@ -441,7 +479,7 @@ def main() -> None:
 
         if args.dry_run:
             fixtures = load_fixtures(args.command)
-            command_content = read_file(COMMANDS_DIR / f"{args.command}.md")
+            command_content = read_file(command_path)
             print("\n[DRY RUN] Execution prompt length:",
                   len(build_execution_prompt(command_content, fixtures)), "chars")
             break
@@ -455,43 +493,81 @@ def main() -> None:
         print_usage(result["token_usage"])
 
         current_total = result["scores"].get("total", 0)
+        max_possible = result["scores"].get("max_possible", 0)
 
         # Save result
         out_path = save_result(args.command, i, result)
         print(f"\n  Result saved to {out_path.name}")
         all_results.append(result)
 
-        # Evolution step
-        if args.evolve and i < args.runs:
-            # Early stop: perfect score when optimising for score
-            if args.optimize in ("score", "both") and current_total >= result["scores"].get("max_possible", 30):
+        # -- Best-version tracking --
+        if current_total > best_score:
+            best_score = current_total
+            best_content = read_file(command_path)
+            best_iter = i
+        elif current_total < best_score and args.evolve:
+            # Revert to best before next evolution so we don't build on a regression
+            command_path.write_text(best_content, encoding="utf-8")
+            print(f"  Score regressed — reverted to iteration {best_iter} (score {best_score})")
+
+        # -- Early stop: --score threshold --
+        if args.score is not None and max_possible > 0:
+            pct = current_total / max_possible * 100
+            if pct >= args.score:
+                if args.optimize == "both" and phase == 1:
+                    # Switch to phase 2 instead of stopping
+                    phase = 2
+                    current_optimize = "tokens"
+                    if min_score is None:
+                        min_score = best_score
+                    print(f"\n  -- Phase 2: Token optimisation (score floor: {min_score}) --")
+                else:
+                    print(f"\n  Score threshold reached ({pct:.0f}% >= {args.score:.0f}%) — stopping.")
+                    break
+
+        # -- Early stop: perfect score --
+        if current_optimize == "score" and max_possible > 0 and current_total >= max_possible:
+            if args.optimize == "both":
+                phase = 2
+                current_optimize = "tokens"
+                if min_score is None:
+                    min_score = best_score
+                print(f"\n  Perfect score — switching to token optimisation (floor: {min_score})")
+            else:
                 print("\n  Perfect score — stopping early.")
                 break
 
-            # Determine min_score threshold for token optimisation
-            min_score = args.min_score
-            if min_score is None and args.optimize in ("tokens", "both"):
-                # Default: use iteration-1 score as the floor
-                if i == 1:
-                    min_score = current_total
-                    print(f"\n  Using iteration 1 score ({min_score}) as minimum threshold.")
-                else:
-                    min_score = all_results[0]["scores"].get("total", 0)
+        # -- Early stop: negligible token change in token phase --
+        if current_optimize == "tokens" and len(all_results) >= 2:
+            prev_exec = all_results[-2]["token_usage"]["execution"]["total_tokens"]
+            curr_exec = result["token_usage"]["execution"]["total_tokens"]
+            if prev_exec > 0:
+                change_pct = abs(prev_exec - curr_exec) / prev_exec * 100
+                if change_pct < 5:
+                    print(f"\n  Token change negligible ({change_pct:.1f}%) — stopping token optimisation.")
+                    break
+
+        # -- Evolution step --
+        if args.evolve and i < args.runs:
+            # Determine min_score for token optimisation
+            effective_min = min_score
+            if effective_min is None and current_optimize == "tokens":
+                effective_min = best_score
+                print(f"\n  Using best score ({effective_min}) as minimum threshold.")
 
             new_content, evolve_usage = evolve_command(
                 args.command, result["command_output"],
                 result["scores"], args.model,
                 criteria_content=criteria_content,
-                optimize=args.optimize,
+                optimize=current_optimize,
                 token_usage=result["token_usage"],
-                min_score=min_score,
+                min_score=effective_min,
             )
 
             # Extract any helper scripts the evolution step produced
             new_content, scripts = extract_scripts(new_content)
 
             # Write the evolved command
-            command_path = COMMANDS_DIR / f"{args.command}.md"
             command_path.write_text(new_content, encoding="utf-8")
             print(f"  Command updated ({evolve_usage['total_tokens']:,} tokens)")
 
@@ -506,8 +582,12 @@ def main() -> None:
             # Track cumulative usage
             result["token_usage"]["evolution"] = evolve_usage
 
-            if current_total > best_score:
-                best_score = current_total
+    # Ensure the best version is the final state
+    if args.evolve and all_results and best_iter > 0:
+        final_score = all_results[-1]["scores"].get("total", 0)
+        if final_score < best_score:
+            command_path.write_text(best_content, encoding="utf-8")
+            print(f"\n  Final command set to iteration {best_iter} (best score: {best_score})")
 
     # Summary
     if len(all_results) > 1:
@@ -523,6 +603,8 @@ def main() -> None:
             max_possible = r["scores"].get("max_possible", "?")
             pct = f"{total / max_possible * 100:.0f}%" if isinstance(max_possible, (int, float)) and max_possible > 0 else "?"
             score_str = f"{total}/{max_possible} ({pct})"
+            if r["iteration"] == best_iter:
+                score_str += " *"
 
             exec_tokens = r["token_usage"]["execution"]["total_tokens"]
             score_tokens = r["token_usage"]["scoring"]["total_tokens"]
@@ -565,12 +647,15 @@ def main() -> None:
             row_line = "  ".join(r[k].rjust(col_widths[k]) for k in headers)
             print(f"    {row_line}")
 
-        # Score change
+        if best_iter > 0:
+            print(f"\n    Best iteration: {best_iter} (score: {best_score})")
+            print("    (* = best)")
+
+        # Score change (first -> best)
         first = all_results[0]["scores"].get("total", 0)
-        last = all_results[-1]["scores"].get("total", 0)
-        delta = last - first
+        delta = best_score - first
         sign = "+" if delta > 0 else ""
-        print(f"\n    Score change: {sign}{delta} ({first} -> {last})")
+        print(f"    Score change: {sign}{delta} ({first} -> {best_score})")
 
         # Execution token trend
         exec_list = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]
