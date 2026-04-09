@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -81,6 +82,7 @@ def build_evolution_prompt(
     command_content: str,
     scores: dict,
     command_output: str,
+    criteria_content: str = "",
     optimize: str = "score",
     token_usage: dict | None = None,
     min_score: int | None = None,
@@ -90,10 +92,18 @@ def build_evolution_prompt(
         objective = (
             "Your task: Edit the skill definition to REDUCE TOKEN USAGE while "
             f"keeping the total score at or above {min_score}. "
-            "Strategies: remove redundant instructions, combine similar steps, "
-            "use more concise phrasing, eliminate unnecessary examples, reduce "
-            "output verbosity requirements. Do NOT sacrifice quality — only cut "
-            "waste.\n\n"
+            "Strategies:\n"
+            "- Remove redundant instructions, combine similar steps, use concise phrasing\n"
+            "- Eliminate unnecessary examples and reduce output verbosity requirements\n"
+            "- Offload expensive work to local Python scripts in `scripts/` that the "
+            "skill calls via Bash — e.g. parsing, formatting, data extraction, "
+            "validation. These run offline with zero token cost. The skill should "
+            "call them with `python scripts/<name>.py` and use their output.\n"
+            "- If you create a helper script, include its full content in a new "
+            "section at the end of your response, fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n"
+            "Do NOT sacrifice quality — only cut waste.\n\n"
         )
     elif optimize == "both":
         objective = (
@@ -102,6 +112,12 @@ def build_evolution_prompt(
             "first, but also look for opportunities to tighten the prompt — remove "
             "redundancy, combine steps, use concise phrasing. Every token saved "
             "without losing quality is a win.\n\n"
+            "You can also offload expensive work to local Python scripts in "
+            "`scripts/` — e.g. parsing, formatting, data extraction — which run "
+            "offline with zero token cost. If you create a helper script, include "
+            "its full content fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n\n"
         )
     else:  # score (default)
         objective = (
@@ -121,10 +137,20 @@ def build_evolution_prompt(
             "Aim to reduce these numbers in the next iteration.\n\n"
         )
 
+    criteria_block = ""
+    if criteria_content:
+        criteria_block = (
+            "## Evaluation Criteria\n\n"
+            "This is the rubric used to score the output. Study the dimension "
+            "descriptions and score anchors to understand exactly what the "
+            "evaluator rewards and penalises.\n\n"
+            f"{criteria_content}\n\n"
+        )
+
     return (
         "You are an expert prompt engineer improving a Claude Code skill command.\n\n"
-        "Below is the current skill definition, the output it produced, and the "
-        "evaluation scores with suggestions.\n\n"
+        "Below is the current skill definition, the output it produced, the "
+        "evaluation criteria, and the scores with suggestions.\n\n"
         f"{objective}"
         "Return ONLY the improved skill file content — no explanation, no markdown "
         "fences, just the raw .md content.\n\n"
@@ -132,6 +158,7 @@ def build_evolution_prompt(
         f"{command_content}\n\n"
         "## Output Produced\n\n"
         f"```\n{command_output}\n```\n\n"
+        f"{criteria_block}"
         "## Evaluation Scores\n\n"
         f"```json\n{json.dumps(scores, indent=2)}\n```\n\n"
         f"{token_block}"
@@ -188,6 +215,32 @@ def parse_scores(raw: str) -> dict:
         end = text.rfind("}") + 1
         text = text[start:end]
     return json.loads(text)
+
+
+def extract_scripts(content: str) -> tuple[str, dict[str, str]]:
+    """Extract helper scripts from evolution output.
+
+    Looks for blocks like:
+        SCRIPT: scripts/foo.py
+        ```python
+        ...code...
+        ```
+
+    Returns (cleaned_content, {path: code}) with script blocks removed.
+    """
+    scripts: dict[str, str] = {}
+    # Match SCRIPT: path followed by a fenced code block
+    pattern = re.compile(
+        r'\n*SCRIPT:\s*(scripts/\S+)\s*\n'
+        r'```(?:python)?\s*\n'
+        r'(.*?)'
+        r'\n```',
+        re.DOTALL,
+    )
+    for m in pattern.finditer(content):
+        scripts[m.group(1)] = m.group(2)
+    cleaned = pattern.sub('', content).rstrip() + '\n'
+    return cleaned, scripts
 
 
 def save_result(command_name: str, iteration: int, result: dict) -> Path:
@@ -250,6 +303,7 @@ def evolve_command(
     command_output: str,
     scores: dict,
     model: str,
+    criteria_content: str = "",
     optimize: str = "score",
     token_usage: dict | None = None,
     min_score: int | None = None,
@@ -261,6 +315,7 @@ def evolve_command(
     print("  Evolving command...", flush=True)
     evolve_prompt = build_evolution_prompt(
         command_content, scores, command_output,
+        criteria_content=criteria_content,
         optimize=optimize, token_usage=token_usage, min_score=min_score,
     )
     new_content, usage = call_claude(evolve_prompt, model)
@@ -323,6 +378,11 @@ def main() -> None:
     args = parser.parse_args()
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    SCRIPTS_DIR = ROOT_DIR / "scripts"
+
+    # Load criteria once for the evolution prompt
+    criteria_path = CRITERIA_DIR / f"{args.command}.md"
+    criteria_content = read_file(criteria_path) if criteria_path.exists() else ""
 
     all_results = []
     best_score = 0
@@ -374,15 +434,27 @@ def main() -> None:
             new_content, evolve_usage = evolve_command(
                 args.command, result["command_output"],
                 result["scores"], args.model,
+                criteria_content=criteria_content,
                 optimize=args.optimize,
                 token_usage=result["token_usage"],
                 min_score=min_score,
             )
 
+            # Extract any helper scripts the evolution step produced
+            new_content, scripts = extract_scripts(new_content)
+
             # Write the evolved command
             command_path = COMMANDS_DIR / f"{args.command}.md"
             command_path.write_text(new_content, encoding="utf-8")
             print(f"  Command updated ({evolve_usage['total_tokens']:,} tokens)")
+
+            # Write any helper scripts
+            if scripts:
+                SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+                for script_path, script_content in scripts.items():
+                    out = SCRIPTS_DIR / Path(script_path).name
+                    out.write_text(script_content, encoding="utf-8")
+                    print(f"  Script written: {out.relative_to(ROOT_DIR)}")
 
             # Track cumulative usage
             result["token_usage"]["evolution"] = evolve_usage

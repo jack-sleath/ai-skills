@@ -51,8 +51,8 @@ Utility
 /to-browser      (uses same output format as → /browser-task)
 
 
-Evolution
-─────────
+Evolution (repo-local — .claude/commands/)
+──────────────────────────────────────────
 /create-criteria [command(s)]
     └── reads → commands/<command>.md (to derive dimensions)
     └── creates → evals/criteria/<command>.md (scoring rubric)
