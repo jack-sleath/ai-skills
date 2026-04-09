@@ -78,11 +78,35 @@ def build_scoring_prompt(criteria_content: str, command_output: str) -> str:
     )
 
 
+def load_related_scripts(command_name: str) -> dict[str, str]:
+    """Load any Python helper scripts that the skill references.
+
+    Checks scripts/ for files matching the command name or mentioned in the
+    skill file content.
+    """
+    scripts_dir = ROOT_DIR / "scripts"
+    if not scripts_dir.is_dir():
+        return {}
+
+    command_path = COMMANDS_DIR / f"{command_name}.md"
+    skill_text = read_file(command_path) if command_path.exists() else ""
+
+    result: dict[str, str] = {}
+    for f in sorted(scripts_dir.iterdir()):
+        if not f.is_file() or f.suffix != ".py":
+            continue
+        # Include scripts that share the command name or are referenced in the skill
+        if command_name.replace("-", "_") in f.stem or f"scripts/{f.name}" in skill_text:
+            result[f"scripts/{f.name}"] = read_file(f)
+    return result
+
+
 def build_evolution_prompt(
     command_content: str,
     scores: dict,
     command_output: str,
     criteria_content: str = "",
+    existing_scripts: dict[str, str] | None = None,
     optimize: str = "score",
     token_usage: dict | None = None,
     min_score: int | None = None,
@@ -124,6 +148,12 @@ def build_evolution_prompt(
             "Your task: Edit the skill definition to improve the lowest-scoring "
             "dimensions. Make targeted, minimal changes — do not rewrite from scratch. "
             "Preserve the overall structure and intent of the skill.\n\n"
+            "If the skill calls a Python helper script in `scripts/`, you may also "
+            "modify that script to improve the output quality. If creating or "
+            "modifying a script would help score higher (e.g. better formatting, "
+            "richer data extraction), include its full content fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n\n"
         )
 
     token_block = ""
@@ -147,6 +177,19 @@ def build_evolution_prompt(
             f"{criteria_content}\n\n"
         )
 
+    scripts_block = ""
+    if existing_scripts:
+        parts = []
+        for path, content in existing_scripts.items():
+            parts.append(f"### {path}\n```python\n{content}\n```")
+        scripts_block = (
+            "## Existing Helper Scripts\n\n"
+            "The skill currently uses these Python scripts. You may modify them "
+            "to improve output quality or efficiency. Include any changed script "
+            "in a SCRIPT: block at the end of your response.\n\n"
+            + "\n\n".join(parts) + "\n\n"
+        )
+
     return (
         "You are an expert prompt engineer improving a Claude Code skill command.\n\n"
         "Below is the current skill definition, the output it produced, the "
@@ -156,6 +199,7 @@ def build_evolution_prompt(
         "fences, just the raw .md content.\n\n"
         "## Current Skill Definition\n\n"
         f"{command_content}\n\n"
+        f"{scripts_block}"
         "## Output Produced\n\n"
         f"```\n{command_output}\n```\n\n"
         f"{criteria_block}"
@@ -312,10 +356,13 @@ def evolve_command(
     command_path = COMMANDS_DIR / f"{command_name}.md"
     command_content = read_file(command_path)
 
+    existing_scripts = load_related_scripts(command_name)
+
     print("  Evolving command...", flush=True)
     evolve_prompt = build_evolution_prompt(
         command_content, scores, command_output,
         criteria_content=criteria_content,
+        existing_scripts=existing_scripts,
         optimize=optimize, token_usage=token_usage, min_score=min_score,
     )
     new_content, usage = call_claude(evolve_prompt, model)
