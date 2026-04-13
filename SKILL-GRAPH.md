@@ -51,6 +51,16 @@ Utility
 /to-browser      (uses same output format as → /browser-task)
 
 
+Roles
+─────
+/as-a <role> [task]
+    └── reads → ~/.claude/roles/<role>.md (role definition)
+    └── applies role framework to the given task
+    └── available roles: qa-tester, code-reviewer, tech-lead,
+        product-manager, security-auditor, devops-engineer,
+        technical-writer, ux-designer
+
+
 Evolution (repo-local — .claude/commands/)
 ──────────────────────────────────────────
 /create-criteria [command(s)]

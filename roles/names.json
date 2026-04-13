@@ -1,0 +1,10 @@
+{
+  "qa-tester": ["Mila", "Vinnie", "Raj", "Priya", "Tomás"],
+  "code-reviewer": ["JP", "Peter", "Craig", "Amara", "Lena"],
+  "tech-lead": ["Morgan", "Samir", "Dana", "Eli", "Kenji"],
+  "product-manager": ["Sam", "Mark", "Dina", "Ava", "Rui"],
+  "security-auditor": ["Nyx", "Farid", "Isla", "Zane", "Kira"],
+  "devops-engineer": ["Bo", "Tariq", "Jules", "Ren", "Sasha"],
+  "technical-writer": ["Wren", "Luca", "Maren", "Ash", "Nia"],
+  "ux-designer": ["Zoë", "Kai", "Ines", "Rowan", "Cleo"]
+}

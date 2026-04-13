@@ -32,6 +32,24 @@ if (-not $ProfileOnly) {
         Write-Host "Done. $($skills.Count) Claude skill(s) installed."
     }
 
+    # Copy role definitions
+    $rolesSource = Join-Path $repoRoot "roles"
+    $rolesDest = Join-Path $HOME ".claude\roles"
+
+    if (Test-Path $rolesSource) {
+        if (-not (Test-Path $rolesDest)) {
+            New-Item -ItemType Directory -Path $rolesDest -Force | Out-Null
+            Write-Host "Created $rolesDest"
+        }
+
+        $roleFiles = Get-ChildItem -Path $rolesSource -Include "*.md","*.json" -File
+        foreach ($role in $roleFiles) {
+            Copy-Item -Path $role.FullName -Destination $rolesDest -Force
+            Write-Host "Copied (Role): $($role.Name)"
+        }
+        Write-Host "Done. $($roleFiles.Count) role file(s) installed."
+    }
+
     # Copy helper scripts
     $scriptsSource = Join-Path $repoRoot "scripts"
     $scriptsDest = Join-Path $HOME ".claude\scripts"

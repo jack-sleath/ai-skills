@@ -26,6 +26,23 @@ else
     echo "Done. $count Claude skill(s) installed."
 fi
 
+# ── Role definitions ───────────────────────────────────────────────────────
+ROLES_SOURCE="$REPO_ROOT/roles"
+ROLES_DEST="$HOME/.claude/roles"
+
+if [ -d "$ROLES_SOURCE" ]; then
+    mkdir -p "$ROLES_DEST"
+    rcount=0
+    for role in "$ROLES_SOURCE"/*.md "$ROLES_SOURCE"/*.json; do
+        [ -f "$role" ] || continue
+        name="$(basename "$role")"
+        ln -sf "$role" "$ROLES_DEST/$name"
+        echo "Linked (Role): $name"
+        ((rcount++))
+    done
+    echo "Done. $rcount role file(s) installed."
+fi
+
 # ── Helper scripts ─────────────────────────────────────────────────────────
 SCRIPTS_SOURCE="$REPO_ROOT/scripts"
 SCRIPTS_DEST="$HOME/.claude/scripts"
