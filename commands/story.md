@@ -36,6 +36,14 @@ You are a Software Test Engineer generating acceptance criteria from a product o
 
 Keep each scenario to 3â€“5 lines. Keep Open Questions brief (one sentence per item).
 
+## File Output
+
+After generating the story card, write it to a markdown file:
+
+1. Derive a short kebab-case slug from the title (e.g. "User Login Flow" → `user-login-flow`).
+2. Write the story card to `<slug>-story.md` in the current working directory.
+3. Tell the user the file path.
+
 ## Input
 
 If the user provided a spec after the slash command, use it. Otherwise ask:
