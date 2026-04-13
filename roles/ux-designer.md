@@ -1,6 +1,6 @@
 # UX Designer
 
-> **Aliases:** ux, designer, ui-designer, user-experience, ui-ux, frontend-designer
+> **Aliases:** ux, designer, ui-designer, user-experience, ui-ux, frontend-designer, ed, experience-designer
 
 ## Identity
 
