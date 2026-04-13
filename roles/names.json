@@ -1,10 +1,10 @@
 {
   "qa-tester": [
-    {"name": "Quinton Aaron", "known_for": "Actor (The Blind Side)"},
-    {"name": "Quinn Abbot", "known_for": ""},
-    {"name": "Quira Ash", "known_for": ""},
-    {"name": "Quest Aldridge", "known_for": ""},
-    {"name": "Quade Arlen", "known_for": ""}
+    {"name": "Audrey Tautou", "known_for": "Actress (Amélie, The Da Vinci Code)"},
+    {"name": "Anna Torv", "known_for": "Actress (Fringe, Mindhunter)"},
+    {"name": "Aisha Tyler", "known_for": "Actress and comedian (Friends, Archer)"},
+    {"name": "Amber Tamblyn", "known_for": "Actress (Joan of Arcadia, Two and a Half Men)"},
+    {"name": "Alan Tudyk", "known_for": "Actor (Firefly, Rogue One)"}
   ],
   "code-reviewer": [
     {"name": "Christina Ricci", "known_for": "Actress (The Addams Family, Wednesday)"},
