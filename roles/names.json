@@ -1,10 +1,58 @@
 {
-  "qa-tester": ["Mila", "Vinnie", "Raj", "Priya", "Tomás"],
-  "code-reviewer": ["JP", "Peter", "Craig", "Amara", "Lena"],
-  "tech-lead": ["Morgan", "Samir", "Dana", "Eli", "Kenji"],
-  "product-manager": ["Sam", "Mark", "Dina", "Ava", "Rui"],
-  "security-auditor": ["Nyx", "Farid", "Isla", "Zane", "Kira"],
-  "devops-engineer": ["Bo", "Tariq", "Jules", "Ren", "Sasha"],
-  "technical-writer": ["Wren", "Luca", "Maren", "Ash", "Nia"],
-  "ux-designer": ["Zoë", "Kai", "Ines", "Rowan", "Cleo"]
+  "qa-tester": [
+    {"name": "Audrey Tautou", "known_for": "Actress (Amélie, The Da Vinci Code)"},
+    {"name": "Anna Torv", "known_for": "Actress (Fringe, Mindhunter)"},
+    {"name": "Aisha Tyler", "known_for": "Actress and comedian (Friends, Archer)"},
+    {"name": "Amber Tamblyn", "known_for": "Actress (Joan of Arcadia, Two and a Half Men)"},
+    {"name": "Alan Tudyk", "known_for": "Actor (Firefly, Rogue One)"}
+  ],
+  "code-reviewer": [
+    {"name": "Christina Ricci", "known_for": "Actress (The Addams Family, Wednesday)"},
+    {"name": "Chris Rock", "known_for": "Actor and comedian (Grown Ups, Madagascar)"},
+    {"name": "Carl Reiner", "known_for": "Actor and director (The Dick Van Dyke Show, Ocean's Eleven)"},
+    {"name": "Cliff Robertson", "known_for": "Actor (Charlie, Spider-Man)"},
+    {"name": "Clive Russell", "known_for": "Actor (Game of Thrones, Sherlock Holmes)"}
+  ],
+  "tech-lead": [
+    {"name": "Tea Leoni", "known_for": "Actress (Madam Secretary, The Family Man)"},
+    {"name": "Tina Louise", "known_for": "Actress (Gilligan's Island)"},
+    {"name": "Tommy Lee", "known_for": "Musician (Mötley Crüe), appeared in various films and TV"},
+    {"name": "Taylor Lautner", "known_for": "Actor (Twilight saga)"},
+    {"name": "Tara Lipinski", "known_for": "Olympic figure skating gold medallist and sports commentator"}
+  ],
+  "product-manager": [
+    {"name": "Peter Mayhew", "known_for": "Actor (Chewbacca in the Star Wars franchise)"},
+    {"name": "Paul Mescal", "known_for": "Actor (Normal People, Aftersun, Gladiator II)"},
+    {"name": "Pat Morita", "known_for": "Actor (Mr. Miyagi in The Karate Kid)"},
+    {"name": "Paul McGann", "known_for": "Actor (Doctor Who, Withnail and I)"},
+    {"name": "Penny Marshall", "known_for": "Actress and director (Laverne & Shirley, Big, A League of Their Own)"}
+  ],
+  "security-auditor": [
+    {"name": "Sean Astin", "known_for": "Actor (Samwise in Lord of the Rings, Rudy, Stranger Things)"},
+    {"name": "Shohreh Aghdashloo", "known_for": "Actress (The Expanse, House of Sand and Fog)"},
+    {"name": "Sasha Alexander", "known_for": "Actress (NCIS, Rizzoli & Isles)"},
+    {"name": "Scott Adkins", "known_for": "Actor and martial artist (Undisputed series)"},
+    {"name": "Samuel Anderson", "known_for": "Actor (Doctor Who, Emmerdale)"}
+  ],
+  "devops-engineer": [
+    {"name": "David Eigenberg", "known_for": "Actor (Sex and the City, Chicago Fire)"},
+    {"name": "Dana Elcar", "known_for": "Actor (MacGyver)"},
+    {"name": "Daryl Edwards", "known_for": "Actor (The Wire, Fringe)"},
+    {"name": "Dale Earnhardt", "known_for": "NASCAR legend and 7-time Winston Cup champion"},
+    {"name": "Danny Elfman", "known_for": "Composer and musician (Batman, Edward Scissorhands soundtracks)"}
+  ],
+  "technical-writer": [
+    {"name": "Taika Waititi", "known_for": "Actor and director (Thor: Ragnarok, Jojo Rabbit, What We Do in the Shadows)"},
+    {"name": "Tom Wilkinson", "known_for": "Actor (Michael Clayton, Batman Begins, The Full Monty)"},
+    {"name": "Treat Williams", "known_for": "Actor (Everwood, Hair, Prince of the City)"},
+    {"name": "Tiger Woods", "known_for": "Professional golfer and 15-time major champion"},
+    {"name": "Torrie Wilson", "known_for": "WWE wrestler and actress"}
+  ],
+  "ux-designer": [
+    {"name": "Ellen DeGeneres", "known_for": "Comedian, actress and talk show host (Ellen, Finding Nemo)"},
+    {"name": "Emily Deschanel", "known_for": "Actress (Bones)"},
+    {"name": "Eric Dane", "known_for": "Actor (Grey's Anatomy, Top Gun: Maverick)"},
+    {"name": "Eliza Dushku", "known_for": "Actress (Buffy the Vampire Slayer, Dollhouse)"},
+    {"name": "Emily Dickinson", "known_for": "Iconic 19th-century American poet"}
+  ]
 }

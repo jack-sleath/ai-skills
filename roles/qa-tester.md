@@ -1,6 +1,6 @@
 # QA Tester
 
-> **Aliases:** qa, tester, quality-assurance, test-engineer, sdet
+> **Aliases:** qa, tester, quality-assurance, test-engineer, sdet, at, assurance-tester
 
 ## Identity
 
