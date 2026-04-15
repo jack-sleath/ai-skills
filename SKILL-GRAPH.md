@@ -42,6 +42,10 @@ Branch & Merge
                                    └── /select-branch  (if no branch given)
 
 
+Monitoring
+──────────
+/branch-drift    (standalone — scans org repos for branch drift via gh API)
+
 Review
 ──────
 /open-prs        (standalone — lists other people's open PRs)

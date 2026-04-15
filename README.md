@@ -25,6 +25,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Browser Task | `/browser-task` | Generates a prompt for the Claude web extension to perform a browser-based task, with output as a downloadable `.md` file you can feed back into the terminal |
 | To Browser | `/to-browser` | Extracts instructions from the current conversation and packages them as a `/browser-task` prompt for the Claude web extension |
 | As A | `/as-a <role> [task]` | Adopts a professional role (e.g. qa, reviewer, tech-lead) from `roles/` and approaches the task through that lens |
+| Branch Drift | `/branch-drift` | Checks all repos in the current org for branches that have drifted ahead of their downstream (e.g. main ahead of develop) |
 | Open PRs | `/open-prs` | Lists open PRs by others across the current org/user from the last 3 weeks — oldest first, with line change stats and links |
 | Review PR | `/review-pr` | Picks a PR from the `/open-prs` list, reviews it in the terminal, and optionally posts the review as a PR comment |
 | Review PRs | `/review-prs` | Reviews all open PRs in the current repo with fresh eyes, reports issues grouped by severity, and offers to fix them |
