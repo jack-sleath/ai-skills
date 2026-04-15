@@ -44,6 +44,7 @@ Branch & Merge
 
 Review
 ──────
+/open-prs        (standalone — lists other people's open PRs)
 /review-prs
     └── uses → gh CLI (list, diff, view, checkout)
     └── delegates fix commits to → /commit
