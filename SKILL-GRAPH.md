@@ -42,6 +42,13 @@ Branch & Merge
                                    └── /select-branch  (if no branch given)
 
 
+Review
+──────
+/review-prs
+    └── uses → gh CLI (list, diff, view, checkout)
+    └── delegates fix commits to → /commit
+    └── standalone — no skill dependencies for the review itself
+
 Utility
 ───────
 /select-branch   (used by branch-for and merge-from)
