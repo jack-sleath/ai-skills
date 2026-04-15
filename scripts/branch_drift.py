@@ -12,6 +12,7 @@ import io
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Force UTF-8 output on Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -77,30 +78,43 @@ def main():
     release_ahead_main = []
     develop_ahead_uat = []
 
-    for repo in repos:
+    def check_repo(repo):
+        """Check a single repo for drift. Returns (main_ahead, release_ahead, dev_ahead) lists."""
         name = repo["name"]
         default_branch = repo.get("defaultBranchRef", {}).get("name", "main")
         branches = list_branches(owner, name)
         branch_set = set(branches)
 
+        mad, ram, dau = [], [], []
+
         # main/master ahead of develop
         if "develop" in branch_set:
             n = ahead_by(owner, name, "develop", default_branch)
             if n > 0:
-                main_ahead_develop.append((name, default_branch, n))
+                mad.append((name, default_branch, n))
 
         # release branches ahead of main/master
-        release_branches = [b for b in branches if b.startswith("release/") or b.startswith("release-")]
-        for rb in release_branches:
-            n = ahead_by(owner, name, default_branch, rb)
-            if n > 0:
-                release_ahead_main.append((name, rb, n))
+        for b in branches:
+            if b.startswith("release/") or b.startswith("release-"):
+                n = ahead_by(owner, name, default_branch, b)
+                if n > 0:
+                    ram.append((name, b, n))
 
         # develop ahead of UAT/main
         if "develop" in branch_set and "UAT/main" in branch_set:
             n = ahead_by(owner, name, "UAT/main", "develop")
             if n > 0:
-                develop_ahead_uat.append((name, n))
+                dau.append((name, n))
+
+        return mad, ram, dau
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(check_repo, repo): repo for repo in repos}
+        for future in as_completed(futures):
+            mad, ram, dau = future.result()
+            main_ahead_develop.extend(mad)
+            release_ahead_main.extend(ram)
+            develop_ahead_uat.extend(dau)
 
     total = len(main_ahead_develop) + len(release_ahead_main) + len(develop_ahead_uat)
 
