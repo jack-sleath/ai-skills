@@ -8,9 +8,13 @@ Requires the GitHub CLI (gh) to be installed and authenticated.
 Output: Markdown grouped list of repos with drift.
 """
 
+import io
 import json
 import subprocess
 import sys
+
+# Force UTF-8 output on Windows
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
 def gh(*args: str) -> str:
@@ -48,12 +52,6 @@ def ahead_by(owner: str, repo: str, base: str, head: str) -> int:
 
 def list_branches(owner: str, repo: str) -> list[str]:
     """List all branch names for a repo."""
-    raw = gh_json(
-        "api",
-        f"repos/{owner}/{repo}/branches",
-        "--paginate",
-        "--jq", ".[].name",
-    )
     # --jq with --paginate returns newline-separated strings, not JSON
     result = gh(
         "api",
@@ -70,7 +68,7 @@ def main():
         print("Error: could not determine repo owner. Is gh authenticated?", file=sys.stderr)
         sys.exit(1)
 
-    repos = gh_json("repo", "list", owner, "--no-archived", "--limit", "200", "--json", "name,defaultBranch")
+    repos = gh_json("repo", "list", owner, "--no-archived", "--limit", "200", "--json", "name,defaultBranchRef")
     if not repos:
         print(f"No repositories found for **{owner}**.")
         sys.exit(0)
@@ -81,7 +79,7 @@ def main():
 
     for repo in repos:
         name = repo["name"]
-        default_branch = repo["defaultBranch"]
+        default_branch = repo.get("defaultBranchRef", {}).get("name", "main")
         branches = list_branches(owner, name)
         branch_set = set(branches)
 

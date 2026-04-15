@@ -8,10 +8,14 @@ Requires the GitHub CLI (gh) to be installed and authenticated.
 Output: Markdown table with PR link, repo, date, source, target, author, +/- lines.
 """
 
+import io
 import json
 import subprocess
 import sys
 from datetime import datetime, timedelta
+
+# Force UTF-8 output on Windows
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
 def gh(*args: str) -> str:
@@ -54,14 +58,14 @@ def main():
     # Date cutoff: 3 weeks ago
     cutoff = (datetime.now() - timedelta(weeks=3)).strftime("%Y-%m-%d")
 
-    # Search for open PRs across the org
+    # Search for open PRs across the org (limited fields available from search)
     raw = gh(
         "search", "prs",
         "--owner", owner,
         "--state", "open",
         "--created", f">={cutoff}",
         "--limit", "100",
-        "--json", "number,title,url,createdAt,headRefName,baseRefName,author,repository",
+        "--json", "number,title,url,createdAt,repository,author",
     )
 
     prs = json.loads(raw) if raw else []
@@ -76,9 +80,9 @@ def main():
     # Sort oldest first
     prs.sort(key=lambda pr: pr.get("createdAt", ""))
 
-    # Build table
-    print(f"| PR | Repo | Date | Source | Target | Author | Added | Removed |")
-    print(f"|---|---|---|---|---|---|---|---|")
+    # Fetch branch details per PR and build table
+    print("| PR | Repo | Date | Source | Target | Author | Added | Removed |")
+    print("|---|---|---|---|---|---|---|---|")
 
     total_added = 0
     total_removed = 0
@@ -88,10 +92,19 @@ def main():
         title = pr["title"]
         url = pr["url"]
         date = pr["createdAt"][:10]
-        head = pr.get("headRefName", "?")
-        base = pr.get("baseRefName", "?")
         author = pr.get("author", {}).get("login", "?")
         repo_name = pr.get("repository", {}).get("name", "?")
+        nwo = pr.get("repository", {}).get("nameWithOwner", f"{owner}/{repo_name}")
+
+        # Fetch head/base branch names from the PR itself
+        detail_raw = gh(
+            "pr", "view", str(number),
+            "--repo", nwo,
+            "--json", "headRefName,baseRefName",
+        )
+        detail = json.loads(detail_raw) if detail_raw else {}
+        head = detail.get("headRefName", "?")
+        base = detail.get("baseRefName", "?")
 
         added, removed = count_diff_lines(owner, repo_name, number)
         total_added += added
