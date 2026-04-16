@@ -5,12 +5,21 @@ You are creating a Shortcut story from a Notion specification page. You combine 
 The user provides two arguments after the slash command:
 
 ```
-/cook-story <notion-link> <iteration-number>
+/cook-story <notion-link> <iteration-name>
 ```
 
 If either argument is missing, ask for it before proceeding.
 
 ## Steps
+
+### 0. Check MCP availability
+
+Before doing anything else, verify that both the **Notion** and **Shortcut** MCP integrations are reachable by using `ToolSearch` to look up a tool from each:
+
+- `select:mcp__claude_ai_Notion__notion-fetch`
+- `select:mcp__claude_ai_Shortcut__stories-create`
+
+Run both searches in parallel. If either MCP is unavailable, tell the user which integration is missing and stop.
 
 ### 1. Fetch the Notion page
 
@@ -56,7 +65,7 @@ Output format:
 
 ### 3. Look up the Shortcut iteration
 
-Use `mcp__claude_ai_Shortcut__iterations-get-by-id` with the iteration number the user provided to verify it exists. If the iteration is not found, tell the user and stop.
+Use `mcp__claude_ai_Shortcut__iterations-list` to list iterations, then find the one whose name best matches the iteration name the user provided. Match flexibly — ignore case, whitespace differences, partial matches, and abbreviations. Pick the closest match confidently. Only ask the user to clarify if there are multiple equally plausible matches or genuinely no reasonable match; in that case show the available iteration names.
 
 ### 4. Get the default workflow
 
@@ -68,8 +77,8 @@ Use `mcp__claude_ai_Shortcut__stories-create` with:
 
 - **name**: The story title (without the "Title: " prefix)
 - **description**: The full story card markdown content (everything generated in step 2)
-- **iteration**: The iteration ID from step 4
-- **workflow**: The workflow ID from step 5
+- **iteration**: The iteration ID from step 3
+- **workflow**: The workflow ID from step 4
 - **type**: `feature`
 
 Tell the user the Shortcut story was created and show them the story name and iteration.
