@@ -23,6 +23,10 @@ Documentation
 /stories ─── requires → MILESTONES.md
     └── generates per-milestone cards using same format as → /story
 /story       (standalone — no dependencies)
+/cook-story  <notion-link> <iteration>
+    └── uses same story-card format as → /story
+    └── fetches spec from → Notion (mcp__claude_ai_Notion__notion-fetch)
+    └── creates story in → Shortcut (mcp__claude_ai_Shortcut__stories-create)
 
 
 Implementation
