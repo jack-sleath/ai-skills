@@ -154,7 +154,7 @@ For full details on the eval framework, see [`evals/README.md`](evals/README.md)
 ai-skills/
   commands/       # Claude Code skill .md files
   roles/          # Professional role definitions for /as-a
-  data/           # Seed JSON files copied to ~/.claude/ on install (skipped if dest exists)
+  data/           # Seed JSON files copied to ~/.claude/ on install (merged by `name` key for array-of-object JSON — user edits and locally-added entries preserved; new seed entries appended)
   evals/          # Self-evolution eval framework
     criteria/     # Per-command scoring rubrics (.md)
     fixtures/     # Test inputs per command (subdirectory each)

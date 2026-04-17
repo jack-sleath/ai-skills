@@ -44,18 +44,32 @@ if [ -d "$ROLES_SOURCE" ]; then
 fi
 
 # ── Seed data files ────────────────────────────────────────────────────────
-# Copy only if destination missing so the user's edits are never clobbered.
+# For JSON arrays-of-named-objects, merge by `name` (live wins on conflict,
+# missing seed entries are appended). For any other shape or non-JSON file,
+# copy only if destination missing.
 DATA_SOURCE="$REPO_ROOT/data"
 DATA_DEST="$HOME/.claude"
+MERGE_SCRIPT="$REPO_ROOT/scripts/merge_data_json.py"
+
+if command -v python3 >/dev/null 2>&1; then
+    PY=python3
+elif command -v python >/dev/null 2>&1; then
+    PY=python
+else
+    PY=""
+fi
 
 if [ -d "$DATA_SOURCE" ]; then
     for dfile in "$DATA_SOURCE"/*; do
         [ -f "$dfile" ] || continue
         name="$(basename "$dfile")"
-        if [ -e "$DATA_DEST/$name" ]; then
+        dest="$DATA_DEST/$name"
+        if [[ "$name" == *.json ]] && [ -f "$MERGE_SCRIPT" ] && [ -n "$PY" ]; then
+            "$PY" "$MERGE_SCRIPT" "$dfile" "$dest"
+        elif [ -e "$dest" ]; then
             echo "Skipped (Data, exists): $name"
         else
-            cp "$dfile" "$DATA_DEST/$name"
+            cp "$dfile" "$dest"
             echo "Copied (Data): $name"
         fi
     done
