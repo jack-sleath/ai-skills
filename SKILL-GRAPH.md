@@ -69,7 +69,9 @@ Utility
 /browser-task
     └── generates prompt for Claude web extension
     └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts prompt on clipboard)
-/to-browser      (uses same output format as → /browser-task)
+/to-browser
+    └── extracts instructions + context from the current conversation
+    └── delegates to → /browser-task (skips its Phase 1 clarifying questions)
 /who-is-in-charge
     └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
     └── reads → ~/.claude/who-is-in-charge.json (handle list)
