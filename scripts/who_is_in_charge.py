@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Prepend a random handle from ~/.claude/who-is-in-charge.json to the current
-Claude Code session's title, so the user can tell different chats apart at a glance.
+"""Pick a random handle from ~/.claude/who-is-in-charge.json and print the full
+target session title, so the caller can feed it to Claude Code's built-in
+`/rename` command.
 
-Locates the session by matching the current working directory against the `cwd`
-field in ~/.claude/sessions/*.json, picking the most recently modified match.
-Writes the new `name` back to the same JSON file.
+Locates the current session by matching cwd against ~/.claude/sessions/*.json,
+picking the most recently modified match, and strips any existing handle prefix
+from the current name so repeated runs swap handles instead of stacking.
 
-Idempotent: if the current title already starts with a handle from the list,
-that prefix is stripped before the new one is prepended, so re-running the
-command swaps the handle instead of stacking them.
+Prints only the target title to stdout. Does not mutate any files — use
+`/rename <output>` to apply, which updates both the session JSON and the live
+terminal title.
 """
 import json
 import os
@@ -42,33 +43,26 @@ def main() -> int:
         print(f"ERROR: {handles_file} must be a non-empty array", file=sys.stderr)
         return 1
 
-    if not sessions_dir.exists():
-        print(f"ERROR: {sessions_dir} not found", file=sys.stderr)
-        return 1
-
-    candidates = []
-    for f in sessions_dir.glob("*.json"):
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        session_cwd_raw = data.get("cwd")
-        if not session_cwd_raw:
-            continue
-        try:
-            session_cwd = Path(session_cwd_raw).resolve()
-        except (OSError, ValueError):
-            continue
-        if session_cwd == cwd:
-            candidates.append((f.stat().st_mtime, f, data))
-
-    if not candidates:
-        print(f"ERROR: no session file matching cwd {cwd}", file=sys.stderr)
-        return 1
-
-    candidates.sort(reverse=True)
-    _, session_file, data = candidates[0]
-    current = data.get("name", "") or ""
+    current = ""
+    if sessions_dir.exists():
+        candidates = []
+        for f in sessions_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            session_cwd_raw = data.get("cwd")
+            if not session_cwd_raw:
+                continue
+            try:
+                session_cwd = Path(session_cwd_raw).resolve()
+            except (OSError, ValueError):
+                continue
+            if session_cwd == cwd:
+                candidates.append((f.stat().st_mtime, data))
+        if candidates:
+            candidates.sort(reverse=True)
+            current = candidates[0][1].get("name", "") or ""
 
     original = current
     for h in handles:
@@ -81,9 +75,6 @@ def main() -> int:
 
     pick = random.choice(handles)
     new_name = f"{pick['emoji']} {pick['name']} - {original}" if original else f"{pick['emoji']} {pick['name']}"
-
-    data["name"] = new_name
-    session_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     print(new_name)
     return 0
 

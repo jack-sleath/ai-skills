@@ -69,9 +69,9 @@ Utility
 /browser-task    (standalone — generates prompt for Claude web extension)
 /to-browser      (uses same output format as → /browser-task)
 /who-is-in-charge
-    └── runs → ~/.claude/scripts/who_is_in_charge.py
+    └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
     └── reads → ~/.claude/who-is-in-charge.json (handle list)
-    └── mutates → ~/.claude/sessions/<pid>.json (session title)
+    └── hands off → Claude Code built-in /rename (applies live)
 
 
 Roles
