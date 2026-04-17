@@ -2,5 +2,9 @@
   { "emoji": "🤠", "name": "The Kid" },
   { "emoji": "👸", "name": "Princess" },
   { "emoji": "🤴", "name": "Sweet Prince" },
-  { "emoji": "👼", "name": "Baby Boy" }
+  { "emoji": "👼", "name": "Baby Boy" },
+  { "emoji": "🤓", "name": "Nerd" },
+  { "emoji": "🐶", "name": "Big Dog" },
+  { "emoji": "🧑‍🚀", "name": "Rocketman" },
+  { "emoji": "🧛", "name": "A Dracula" }
 ]
