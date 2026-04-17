@@ -20,5 +20,5 @@ Tag the current Claude Code session with a random handle (emoji + name) drawn fr
 
 - Claude Code's built-in `/rename` is the only reliable way to update the live terminal title — writing the session JSON directly does not refresh the in-memory title until the CLI restarts. The script therefore only *computes* the target name; the user applies it by pasting the clipboard contents into the prompt.
 - The copied line also lands in the Win+V clipboard history panel if Windows clipboard history is enabled (Settings → System → Clipboard).
-- If the current title already starts with a known handle prefix (`<emoji> <name> - `), that prefix is stripped before the new one is prepended — so repeated runs swap the handle, they do not stack.
+- Format: `<emoji> <name> - <cwd basename>`. The suffix is always the current working directory's folder name, so repeated runs swap the handle but keep the title tied to the project — e.g. `🤓 Nerd - ai-skills` → `🤴 Sweet Prince - ai-skills`.
 - To add more handles, edit `~/.claude/who-is-in-charge.json` — a JSON array of `{ "emoji": "…", "name": "…" }` objects.
