@@ -30,7 +30,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Review PR | `/review-pr` | Picks a PR from the `/open-prs` list, reviews it in the terminal, and optionally posts the review as a PR comment |
 | Review PRs | `/review-prs` | Reviews all open PRs in the current repo with fresh eyes, reports issues grouped by severity, and offers to fix them |
 | Cook Story | `/cook-story <notion-link> <iteration>` | Fetches a Notion spec, generates a Gherkin story card, and creates a Shortcut story in the given iteration |
-| Who Is In Charge | `/who-is-in-charge` | Picks a random handle (emoji + name) from `~/.claude/who-is-in-charge.json` and hands back a ready-to-paste `/rename` line to tag the current session live — swaps the handle on repeat runs rather than stacking |
+| Who Is In Charge | `/who-is-in-charge` | Picks a random handle (emoji + name) from `~/.claude/who-is-in-charge.json` and auto-copies a `/rename` line to your clipboard so you can paste it straight into the prompt — swaps the handle on repeat runs rather than stacking |
 | Create Criteria | `/create-criteria [command(s)]` | *(repo-local)* Scaffolds eval criteria and test fixtures for one or more commands so they can be used with `/evolve` |
 | Evolve | `/evolve [command(s)] [--runs N] [--score N] [--model M] [--optimize O]` | *(repo-local)* Runs the self-evolution eval loop for one or more commands — executes against test fixtures, scores output, and iteratively improves prompts. Batch mode accepts a comma/space-separated list of commands |
 

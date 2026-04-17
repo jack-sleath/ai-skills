@@ -71,7 +71,8 @@ Utility
 /who-is-in-charge
     └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
     └── reads → ~/.claude/who-is-in-charge.json (handle list)
-    └── hands off → Claude Code built-in /rename (applies live)
+    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts /rename line on clipboard)
+    └── hands off → Claude Code built-in /rename (user pastes, applies live)
 
 
 Roles
