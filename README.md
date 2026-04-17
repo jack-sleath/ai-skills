@@ -11,7 +11,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Milestone | `/milestone` | Implements the next incomplete milestone from `MILESTONES.md`, creates a git branch, commits, and pushes |
 | Stories | `/stories` | Generates a Gherkin story card for every milestone in `MILESTONES.md` and writes them to `stories/milestone-N.md` |
 | Story | `/story` | Generates a single Gherkin story card (title, technical notes, acceptance criteria) from a given specification |
-| Commit | `/commit` | Reviews current changes and creates a well-crafted local git commit |
+| Commit | `/commit` | Reviews current changes, groups related files into logical batches, and creates one commit per batch |
 | Branch For | `/branch-for <base-branch>` | Creates a dated staging branch off a target base, merges the current feature branch in, and opens a PR |
 | Select Branch | `/select-branch [prompt]` | Interactively picks a remote branch using fzf (or a numbered list fallback) and returns the selection |
 | Branch UAT | `/branch-uat` | Shortcut for `/branch-for UAT/main` — creates a `UAT/XXXXX-YYYY-MM-DD` branch and PR |
