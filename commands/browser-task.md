@@ -53,4 +53,13 @@ timestamp: "<ISO 8601>"
 
 ## Phase 3 — Handoff
 
-Tell the user: paste the prompt into the Claude web extension, download `browser-result.md` when done, then share it here to continue.
+After the user has seen the generated prompt, copy its full contents to the clipboard so they can paste it straight into the Claude web extension without retyping or hand-copying.
+
+1. Write the full prompt body (the entire `# Browser Task` document — no surrounding triple-backticks) to `~/.claude/tmp/browser-task.md` using the Write tool. Create the `~/.claude/tmp/` directory if it doesn't exist yet.
+
+2. Copy it to the clipboard:
+   ```bash
+   cat ~/.claude/tmp/browser-task.md | python ~/.claude/scripts/copy_to_clipboard.py
+   ```
+
+3. Tell the user: "The prompt is on your clipboard (also available via Win+V history on Windows) — paste it into the Claude web extension, download `browser-result.md` when done, then share it here to continue."

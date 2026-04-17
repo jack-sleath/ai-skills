@@ -66,7 +66,9 @@ Utility
 /select-branch   (used by branch-for and merge-from)
 /tidy-branches   (standalone — local branch cleanup)
 /estimate-time   (standalone)
-/browser-task    (standalone — generates prompt for Claude web extension)
+/browser-task
+    └── generates prompt for Claude web extension
+    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts prompt on clipboard)
 /to-browser      (uses same output format as → /browser-task)
 /who-is-in-charge
     └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
