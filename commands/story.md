@@ -38,11 +38,18 @@ Keep each scenario to 3â€“5 lines. Keep Open Questions brief (one sentence 
 
 ## File Output
 
-After generating the story card, write it to a markdown file:
+After generating the story card, write it to a markdown file and copy its contents to the clipboard:
 
 1. Derive a short kebab-case slug from the title (e.g. "User Login Flow" → `user-login-flow`).
 2. Write the story card to `<slug>-story.md` in the current working directory.
-3. Tell the user the file path.
+3. Copy the file's contents to the clipboard so the user can paste them straight into another tool:
+
+   ```bash
+   cat <slug>-story.md | python ~/.claude/scripts/copy_to_clipboard.py
+   ```
+
+   If the clipboard command exits non-zero, print its stderr and note that the clipboard copy failed — the file is still saved and is the source of truth.
+4. Tell the user the file path and that the contents are on the clipboard (also available via Win+V history on Windows if clipboard history is enabled).
 
 ## Input
 
