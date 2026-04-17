@@ -30,6 +30,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Review PR | `/review-pr` | Picks a PR from the `/open-prs` list, reviews it in the terminal, and optionally posts the review as a PR comment |
 | Review PRs | `/review-prs` | Reviews all open PRs in the current repo with fresh eyes, reports issues grouped by severity, and offers to fix them |
 | Cook Story | `/cook-story <notion-link> <iteration>` | Fetches a Notion spec, generates a Gherkin story card, and creates a Shortcut story in the given iteration |
+| Who Is In Charge | `/who-is-in-charge` | Tags the current session by prepending a random handle (emoji + name) from `~/.claude/who-is-in-charge.json` to its title — swaps the handle on repeat runs rather than stacking |
 | Create Criteria | `/create-criteria [command(s)]` | *(repo-local)* Scaffolds eval criteria and test fixtures for one or more commands so they can be used with `/evolve` |
 | Evolve | `/evolve [command(s)] [--runs N] [--score N] [--model M] [--optimize O]` | *(repo-local)* Runs the self-evolution eval loop for one or more commands — executes against test fixtures, scores output, and iteratively improves prompts. Batch mode accepts a comma/space-separated list of commands |
 
@@ -153,12 +154,14 @@ For full details on the eval framework, see [`evals/README.md`](evals/README.md)
 ai-skills/
   commands/       # Claude Code skill .md files
   roles/          # Professional role definitions for /as-a
+  data/           # Seed JSON files copied to ~/.claude/ on install (skipped if dest exists)
   evals/          # Self-evolution eval framework
     criteria/     # Per-command scoring rubrics (.md)
     fixtures/     # Test inputs per command (subdirectory each)
     results/      # Run logs with scores and token usage (.json)
     run.py        # API-based eval runner with token tracking
   ps-commands/    # PowerShell / shell function .ps1 / .sh files
+  scripts/        # Python helper scripts copied to ~/.claude/scripts/ on install
   install.ps1     # Windows installer
   install.sh      # Linux/macOS installer
 ```

@@ -50,6 +50,23 @@ if (-not $ProfileOnly) {
         Write-Host "Done. $($roleFiles.Count) role file(s) installed."
     }
 
+    # Copy seed data files (only if destination missing — never clobber user edits)
+    $dataSource = Join-Path $repoRoot "data"
+    $dataDest = Join-Path $HOME ".claude"
+
+    if (Test-Path $dataSource) {
+        $dataFiles = Get-ChildItem -Path $dataSource -File
+        foreach ($dataFile in $dataFiles) {
+            $destPath = Join-Path $dataDest $dataFile.Name
+            if (Test-Path $destPath) {
+                Write-Host "Skipped (Data, exists): $($dataFile.Name)"
+            } else {
+                Copy-Item -Path $dataFile.FullName -Destination $destPath -Force
+                Write-Host "Copied (Data): $($dataFile.Name)"
+            }
+        }
+    }
+
     # Copy helper scripts
     $scriptsSource = Join-Path $repoRoot "scripts"
     $scriptsDest = Join-Path $HOME ".claude\scripts"

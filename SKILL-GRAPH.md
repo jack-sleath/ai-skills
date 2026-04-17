@@ -68,6 +68,10 @@ Utility
 /estimate-time   (standalone)
 /browser-task    (standalone — generates prompt for Claude web extension)
 /to-browser      (uses same output format as → /browser-task)
+/who-is-in-charge
+    └── runs → ~/.claude/scripts/who_is_in_charge.py
+    └── reads → ~/.claude/who-is-in-charge.json (handle list)
+    └── mutates → ~/.claude/sessions/<pid>.json (session title)
 
 
 Roles

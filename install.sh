@@ -43,6 +43,24 @@ if [ -d "$ROLES_SOURCE" ]; then
     echo "Done. $rcount role file(s) installed."
 fi
 
+# ── Seed data files ────────────────────────────────────────────────────────
+# Copy only if destination missing so the user's edits are never clobbered.
+DATA_SOURCE="$REPO_ROOT/data"
+DATA_DEST="$HOME/.claude"
+
+if [ -d "$DATA_SOURCE" ]; then
+    for dfile in "$DATA_SOURCE"/*; do
+        [ -f "$dfile" ] || continue
+        name="$(basename "$dfile")"
+        if [ -e "$DATA_DEST/$name" ]; then
+            echo "Skipped (Data, exists): $name"
+        else
+            cp "$dfile" "$DATA_DEST/$name"
+            echo "Copied (Data): $name"
+        fi
+    done
+fi
+
 # ── Helper scripts ─────────────────────────────────────────────────────────
 SCRIPTS_SOURCE="$REPO_ROOT/scripts"
 SCRIPTS_DEST="$HOME/.claude/scripts"
