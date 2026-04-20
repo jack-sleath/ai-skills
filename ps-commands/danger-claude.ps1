@@ -1,3 +1,3 @@
 function danger-claude {
-    claude --dangerously-skip-permissions "/usage"
+    claude --dangerously-skip-permissions "/plan"
 }

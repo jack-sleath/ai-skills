@@ -26,6 +26,55 @@ else
     echo "Done. $count Claude skill(s) installed."
 fi
 
+# ── Role definitions ───────────────────────────────────────────────────────
+ROLES_SOURCE="$REPO_ROOT/roles"
+ROLES_DEST="$HOME/.claude/roles"
+
+if [ -d "$ROLES_SOURCE" ]; then
+    mkdir -p "$ROLES_DEST"
+    rcount=0
+    for role in "$ROLES_SOURCE"/*.md "$ROLES_SOURCE"/*.json; do
+        [ -f "$role" ] || continue
+        name="$(basename "$role")"
+        ln -sf "$role" "$ROLES_DEST/$name"
+        echo "Linked (Role): $name"
+        ((rcount++))
+    done
+    echo "Done. $rcount role file(s) installed."
+fi
+
+# ── Seed data files ────────────────────────────────────────────────────────
+# For JSON arrays-of-named-objects, merge by `name` (live wins on conflict,
+# missing seed entries are appended). For any other shape or non-JSON file,
+# copy only if destination missing.
+DATA_SOURCE="$REPO_ROOT/data"
+DATA_DEST="$HOME/.claude"
+MERGE_SCRIPT="$REPO_ROOT/scripts/merge_data_json.py"
+
+if command -v python3 >/dev/null 2>&1; then
+    PY=python3
+elif command -v python >/dev/null 2>&1; then
+    PY=python
+else
+    PY=""
+fi
+
+if [ -d "$DATA_SOURCE" ]; then
+    for dfile in "$DATA_SOURCE"/*; do
+        [ -f "$dfile" ] || continue
+        name="$(basename "$dfile")"
+        dest="$DATA_DEST/$name"
+        if [[ "$name" == *.json ]] && [ -f "$MERGE_SCRIPT" ] && [ -n "$PY" ]; then
+            "$PY" "$MERGE_SCRIPT" "$dfile" "$dest"
+        elif [ -e "$dest" ]; then
+            echo "Skipped (Data, exists): $name"
+        else
+            cp "$dfile" "$dest"
+            echo "Copied (Data): $name"
+        fi
+    done
+fi
+
 # ── Helper scripts ─────────────────────────────────────────────────────────
 SCRIPTS_SOURCE="$REPO_ROOT/scripts"
 SCRIPTS_DEST="$HOME/.claude/scripts"

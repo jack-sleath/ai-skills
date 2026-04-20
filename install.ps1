@@ -32,6 +32,46 @@ if (-not $ProfileOnly) {
         Write-Host "Done. $($skills.Count) Claude skill(s) installed."
     }
 
+    # Copy role definitions
+    $rolesSource = Join-Path $repoRoot "roles"
+    $rolesDest = Join-Path $HOME ".claude\roles"
+
+    if (Test-Path $rolesSource) {
+        if (-not (Test-Path $rolesDest)) {
+            New-Item -ItemType Directory -Path $rolesDest -Force | Out-Null
+            Write-Host "Created $rolesDest"
+        }
+
+        $roleFiles = Get-ChildItem -Path $rolesSource -Include "*.md","*.json" -File
+        foreach ($role in $roleFiles) {
+            Copy-Item -Path $role.FullName -Destination $rolesDest -Force
+            Write-Host "Copied (Role): $($role.Name)"
+        }
+        Write-Host "Done. $($roleFiles.Count) role file(s) installed."
+    }
+
+    # Seed data files: for JSON arrays-of-named-objects, merge by `name`
+    # (live wins on conflict, missing seed entries are appended). For any other
+    # shape or non-JSON file, copy only if destination missing.
+    $dataSource = Join-Path $repoRoot "data"
+    $dataDest = Join-Path $HOME ".claude"
+    $mergeScript = Join-Path $repoRoot "scripts\merge_data_json.py"
+
+    if (Test-Path $dataSource) {
+        $dataFiles = Get-ChildItem -Path $dataSource -File
+        foreach ($dataFile in $dataFiles) {
+            $destPath = Join-Path $dataDest $dataFile.Name
+            if ($dataFile.Extension -eq ".json" -and (Test-Path $mergeScript)) {
+                & python $mergeScript $dataFile.FullName $destPath
+            } elseif (Test-Path $destPath) {
+                Write-Host "Skipped (Data, exists): $($dataFile.Name)"
+            } else {
+                Copy-Item -Path $dataFile.FullName -Destination $destPath -Force
+                Write-Host "Copied (Data): $($dataFile.Name)"
+            }
+        }
+    }
+
     # Copy helper scripts
     $scriptsSource = Join-Path $repoRoot "scripts"
     $scriptsDest = Join-Path $HOME ".claude\scripts"

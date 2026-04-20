@@ -23,6 +23,10 @@ Documentation
 /stories ─── requires → MILESTONES.md
     └── generates per-milestone cards using same format as → /story
 /story       (standalone — no dependencies)
+/cook-story  <notion-link> <iteration>
+    └── uses same story-card format as → /story
+    └── fetches spec from → Notion (mcp__claude_ai_Notion__notion-fetch)
+    └── creates story in → Shortcut (mcp__claude_ai_Shortcut__stories-create)
 
 
 Implementation
@@ -42,11 +46,45 @@ Branch & Merge
                                    └── /select-branch  (if no branch given)
 
 
+Monitoring
+──────────
+/branch-drift    (standalone — scans org repos for branch drift via gh API)
+
+Review
+──────
+/open-prs        (standalone — lists other people's open PRs)
+/review-pr
+    └── delegates listing to → /open-prs
+    └── uses → gh CLI (diff, view, comment)
+/review-prs
+    └── uses → gh CLI (list, diff, view, checkout)
+    └── delegates fix commits to → /commit
+    └── standalone — no skill dependencies for the review itself
+
 Utility
 ───────
 /select-branch   (used by branch-for and merge-from)
+/tidy-branches   (standalone — local branch cleanup)
 /estimate-time   (standalone)
-/browser-task    (standalone — generates prompt for Claude web extension)
-/to-browser      (uses same output format as → /browser-task)
-/usage-text      (standalone — runs tools/read_usage.py via Selenium)
+/browser-task
+    └── generates prompt for Claude web extension
+    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts prompt on clipboard)
+/to-browser
+    └── extracts instructions + context from the current conversation
+    └── delegates to → /browser-task (skips its Phase 1 clarifying questions)
+/who-is-in-charge
+    └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
+    └── reads → ~/.claude/who-is-in-charge.json (handle list)
+    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts /rename line on clipboard)
+    └── hands off → Claude Code built-in /rename (user pastes, applies live)
+
+
+Roles
+─────
+/as-a <role> [task]
+    └── reads → ~/.claude/roles/<role>.md (role definition)
+    └── applies role framework to the given task
+    └── available roles: qa-tester, code-reviewer, tech-lead,
+        product-manager, security-auditor, devops-engineer,
+        technical-writer, ux-designer
 ```

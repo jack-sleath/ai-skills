@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -77,10 +78,35 @@ def build_scoring_prompt(criteria_content: str, command_output: str) -> str:
     )
 
 
+def load_related_scripts(command_name: str) -> dict[str, str]:
+    """Load any Python helper scripts that the skill references.
+
+    Checks scripts/ for files matching the command name or mentioned in the
+    skill file content.
+    """
+    scripts_dir = ROOT_DIR / "scripts"
+    if not scripts_dir.is_dir():
+        return {}
+
+    command_path = COMMANDS_DIR / f"{command_name}.md"
+    skill_text = read_file(command_path) if command_path.exists() else ""
+
+    result: dict[str, str] = {}
+    for f in sorted(scripts_dir.iterdir()):
+        if not f.is_file() or f.suffix != ".py":
+            continue
+        # Include scripts that share the command name or are referenced in the skill
+        if command_name.replace("-", "_") in f.stem or f"scripts/{f.name}" in skill_text:
+            result[f"scripts/{f.name}"] = read_file(f)
+    return result
+
+
 def build_evolution_prompt(
     command_content: str,
     scores: dict,
     command_output: str,
+    criteria_content: str = "",
+    existing_scripts: dict[str, str] | None = None,
     optimize: str = "score",
     token_usage: dict | None = None,
     min_score: int | None = None,
@@ -90,10 +116,18 @@ def build_evolution_prompt(
         objective = (
             "Your task: Edit the skill definition to REDUCE TOKEN USAGE while "
             f"keeping the total score at or above {min_score}. "
-            "Strategies: remove redundant instructions, combine similar steps, "
-            "use more concise phrasing, eliminate unnecessary examples, reduce "
-            "output verbosity requirements. Do NOT sacrifice quality — only cut "
-            "waste.\n\n"
+            "Strategies:\n"
+            "- Remove redundant instructions, combine similar steps, use concise phrasing\n"
+            "- Eliminate unnecessary examples and reduce output verbosity requirements\n"
+            "- Offload expensive work to local Python scripts in `scripts/` that the "
+            "skill calls via Bash — e.g. parsing, formatting, data extraction, "
+            "validation. These run offline with zero token cost. The skill should "
+            "call them with `python scripts/<name>.py` and use their output.\n"
+            "- If you create a helper script, include its full content in a new "
+            "section at the end of your response, fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n"
+            "Do NOT sacrifice quality — only cut waste.\n\n"
         )
     elif optimize == "both":
         objective = (
@@ -102,12 +136,24 @@ def build_evolution_prompt(
             "first, but also look for opportunities to tighten the prompt — remove "
             "redundancy, combine steps, use concise phrasing. Every token saved "
             "without losing quality is a win.\n\n"
+            "You can also offload expensive work to local Python scripts in "
+            "`scripts/` — e.g. parsing, formatting, data extraction — which run "
+            "offline with zero token cost. If you create a helper script, include "
+            "its full content fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n\n"
         )
     else:  # score (default)
         objective = (
             "Your task: Edit the skill definition to improve the lowest-scoring "
             "dimensions. Make targeted, minimal changes — do not rewrite from scratch. "
             "Preserve the overall structure and intent of the skill.\n\n"
+            "If the skill calls a Python helper script in `scripts/`, you may also "
+            "modify that script to improve the output quality. If creating or "
+            "modifying a script would help score higher (e.g. better formatting, "
+            "richer data extraction), include its full content fenced as:\n"
+            "  SCRIPT: scripts/<name>.py\n"
+            "  ```python\n  ...code...\n  ```\n\n"
         )
 
     token_block = ""
@@ -121,17 +167,42 @@ def build_evolution_prompt(
             "Aim to reduce these numbers in the next iteration.\n\n"
         )
 
+    criteria_block = ""
+    if criteria_content:
+        criteria_block = (
+            "## Evaluation Criteria\n\n"
+            "This is the rubric used to score the output. Study the dimension "
+            "descriptions and score anchors to understand exactly what the "
+            "evaluator rewards and penalises.\n\n"
+            f"{criteria_content}\n\n"
+        )
+
+    scripts_block = ""
+    if existing_scripts:
+        parts = []
+        for path, content in existing_scripts.items():
+            parts.append(f"### {path}\n```python\n{content}\n```")
+        scripts_block = (
+            "## Existing Helper Scripts\n\n"
+            "The skill currently uses these Python scripts. You may modify them "
+            "to improve output quality or efficiency. Include any changed script "
+            "in a SCRIPT: block at the end of your response.\n\n"
+            + "\n\n".join(parts) + "\n\n"
+        )
+
     return (
         "You are an expert prompt engineer improving a Claude Code skill command.\n\n"
-        "Below is the current skill definition, the output it produced, and the "
-        "evaluation scores with suggestions.\n\n"
+        "Below is the current skill definition, the output it produced, the "
+        "evaluation criteria, and the scores with suggestions.\n\n"
         f"{objective}"
         "Return ONLY the improved skill file content — no explanation, no markdown "
         "fences, just the raw .md content.\n\n"
         "## Current Skill Definition\n\n"
         f"{command_content}\n\n"
+        f"{scripts_block}"
         "## Output Produced\n\n"
         f"```\n{command_output}\n```\n\n"
+        f"{criteria_block}"
         "## Evaluation Scores\n\n"
         f"```json\n{json.dumps(scores, indent=2)}\n```\n\n"
         f"{token_block}"
@@ -190,6 +261,32 @@ def parse_scores(raw: str) -> dict:
     return json.loads(text)
 
 
+def extract_scripts(content: str) -> tuple[str, dict[str, str]]:
+    """Extract helper scripts from evolution output.
+
+    Looks for blocks like:
+        SCRIPT: scripts/foo.py
+        ```python
+        ...code...
+        ```
+
+    Returns (cleaned_content, {path: code}) with script blocks removed.
+    """
+    scripts: dict[str, str] = {}
+    # Match SCRIPT: path followed by a fenced code block
+    pattern = re.compile(
+        r'\n*SCRIPT:\s*(scripts/\S+)\s*\n'
+        r'```(?:python)?\s*\n'
+        r'(.*?)'
+        r'\n```',
+        re.DOTALL,
+    )
+    for m in pattern.finditer(content):
+        scripts[m.group(1)] = m.group(2)
+    cleaned = pattern.sub('', content).rstrip() + '\n'
+    return cleaned, scripts
+
+
 def save_result(command_name: str, iteration: int, result: dict) -> Path:
     """Save a single iteration result to the results directory."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -222,7 +319,24 @@ def run_single_eval(command_name: str, model: str) -> dict:
     print("  Scoring output...", flush=True)
     score_prompt = build_scoring_prompt(criteria_content, command_output)
     score_raw, score_usage = call_claude(score_prompt, model)
-    scores = parse_scores(score_raw)
+    try:
+        scores = parse_scores(score_raw)
+    except (json.JSONDecodeError, ValueError):
+        print("  Score parse failed, retrying...", flush=True)
+        repair_prompt = (
+            "The following text was supposed to be a valid JSON object but could "
+            "not be parsed. Return ONLY the corrected JSON object:\n\n"
+            f"{score_raw}"
+        )
+        score_raw2, retry_usage = call_claude(repair_prompt, model)
+        score_usage = {
+            k: score_usage[k] + retry_usage[k]
+            for k in ("input_tokens", "output_tokens", "total_tokens")
+        }
+        score_usage["cost_usd"] = (
+            score_usage.get("cost_usd", 0) + retry_usage.get("cost_usd", 0)
+        )
+        scores = parse_scores(score_raw2)
 
     total_usage = {
         "execution": exec_usage,
@@ -250,6 +364,7 @@ def evolve_command(
     command_output: str,
     scores: dict,
     model: str,
+    criteria_content: str = "",
     optimize: str = "score",
     token_usage: dict | None = None,
     min_score: int | None = None,
@@ -258,9 +373,13 @@ def evolve_command(
     command_path = COMMANDS_DIR / f"{command_name}.md"
     command_content = read_file(command_path)
 
+    existing_scripts = load_related_scripts(command_name)
+
     print("  Evolving command...", flush=True)
     evolve_prompt = build_evolution_prompt(
         command_content, scores, command_output,
+        criteria_content=criteria_content,
+        existing_scripts=existing_scripts,
         optimize=optimize, token_usage=token_usage, min_score=min_score,
     )
     new_content, usage = call_claude(evolve_prompt, model)
@@ -269,9 +388,11 @@ def evolve_command(
 
 def print_scores(scores: dict) -> None:
     """Pretty-print the score breakdown."""
-    for key, val in scores.items():
-        if isinstance(val, dict) and "score" in val:
-            print(f"    {key}: {val['score']}/5 — {val.get('reasoning', '')}")
+    dims = {k: v for k, v in scores.items() if isinstance(v, dict) and "score" in v}
+    num_dims = len(dims) or 1
+    max_per = scores.get("max_possible", num_dims * 10) // num_dims
+    for key, val in dims.items():
+        print(f"    {key}: {val['score']}/{max_per} — {val.get('reasoning', '')}")
     print(f"    TOTAL: {scores.get('total', '?')}/{scores.get('max_possible', '?')}")
     suggestions = scores.get("suggestions", [])
     if suggestions:
@@ -318,14 +439,38 @@ def main() -> None:
         help="Minimum total score to maintain when --optimize is tokens or both",
     )
     parser.add_argument(
+        "--score",
+        type=float,
+        default=None,
+        help="Stop early when score reaches this percentage (e.g. 85)",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="Print prompts without calling the CLI"
     )
     args = parser.parse_args()
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    SCRIPTS_DIR = ROOT_DIR / "scripts"
+
+    # Load criteria once for the evolution prompt
+    criteria_path = CRITERIA_DIR / f"{args.command}.md"
+    criteria_content = read_file(criteria_path) if criteria_path.exists() else ""
+
+    command_path = COMMANDS_DIR / f"{args.command}.md"
+    original_content = read_file(command_path)
 
     all_results = []
     best_score = 0
+    best_content = original_content
+    best_iter = 0
+
+    # Phase tracking for --optimize both
+    phase = 1
+    current_optimize = "score" if args.optimize == "both" else args.optimize
+    min_score = args.min_score
+
+    if args.optimize == "both":
+        print("\n  -- Phase 1: Score optimisation --")
 
     for i in range(1, args.runs + 1 if args.evolve else 2):
         print(f"\n{'='*60}")
@@ -334,7 +479,7 @@ def main() -> None:
 
         if args.dry_run:
             fixtures = load_fixtures(args.command)
-            command_content = read_file(COMMANDS_DIR / f"{args.command}.md")
+            command_content = read_file(command_path)
             print("\n[DRY RUN] Execution prompt length:",
                   len(build_execution_prompt(command_content, fixtures)), "chars")
             break
@@ -348,47 +493,101 @@ def main() -> None:
         print_usage(result["token_usage"])
 
         current_total = result["scores"].get("total", 0)
+        max_possible = result["scores"].get("max_possible", 0)
 
         # Save result
         out_path = save_result(args.command, i, result)
         print(f"\n  Result saved to {out_path.name}")
         all_results.append(result)
 
-        # Evolution step
-        if args.evolve and i < args.runs:
-            # Early stop: perfect score when optimising for score
-            if args.optimize in ("score", "both") and current_total >= result["scores"].get("max_possible", 30):
+        # -- Best-version tracking --
+        if current_total > best_score:
+            best_score = current_total
+            best_content = read_file(command_path)
+            best_iter = i
+        elif current_total < best_score and args.evolve:
+            # Revert to best before next evolution so we don't build on a regression
+            command_path.write_text(best_content, encoding="utf-8")
+            print(f"  Score regressed — reverted to iteration {best_iter} (score {best_score})")
+
+        # -- Early stop: --score threshold --
+        if args.score is not None and max_possible > 0:
+            pct = current_total / max_possible * 100
+            if pct >= args.score:
+                if args.optimize == "both" and phase == 1:
+                    # Switch to phase 2 instead of stopping
+                    phase = 2
+                    current_optimize = "tokens"
+                    if min_score is None:
+                        min_score = best_score
+                    print(f"\n  -- Phase 2: Token optimisation (score floor: {min_score}) --")
+                else:
+                    print(f"\n  Score threshold reached ({pct:.0f}% >= {args.score:.0f}%) — stopping.")
+                    break
+
+        # -- Early stop: perfect score --
+        if current_optimize == "score" and max_possible > 0 and current_total >= max_possible:
+            if args.optimize == "both":
+                phase = 2
+                current_optimize = "tokens"
+                if min_score is None:
+                    min_score = best_score
+                print(f"\n  Perfect score — switching to token optimisation (floor: {min_score})")
+            else:
                 print("\n  Perfect score — stopping early.")
                 break
 
-            # Determine min_score threshold for token optimisation
-            min_score = args.min_score
-            if min_score is None and args.optimize in ("tokens", "both"):
-                # Default: use iteration-1 score as the floor
-                if i == 1:
-                    min_score = current_total
-                    print(f"\n  Using iteration 1 score ({min_score}) as minimum threshold.")
-                else:
-                    min_score = all_results[0]["scores"].get("total", 0)
+        # -- Early stop: negligible token change in token phase --
+        if current_optimize == "tokens" and len(all_results) >= 2:
+            prev_exec = all_results[-2]["token_usage"]["execution"]["total_tokens"]
+            curr_exec = result["token_usage"]["execution"]["total_tokens"]
+            if prev_exec > 0:
+                change_pct = abs(prev_exec - curr_exec) / prev_exec * 100
+                if change_pct < 5:
+                    print(f"\n  Token change negligible ({change_pct:.1f}%) — stopping token optimisation.")
+                    break
+
+        # -- Evolution step --
+        if args.evolve and i < args.runs:
+            # Determine min_score for token optimisation
+            effective_min = min_score
+            if effective_min is None and current_optimize == "tokens":
+                effective_min = best_score
+                print(f"\n  Using best score ({effective_min}) as minimum threshold.")
 
             new_content, evolve_usage = evolve_command(
                 args.command, result["command_output"],
                 result["scores"], args.model,
-                optimize=args.optimize,
+                criteria_content=criteria_content,
+                optimize=current_optimize,
                 token_usage=result["token_usage"],
-                min_score=min_score,
+                min_score=effective_min,
             )
 
+            # Extract any helper scripts the evolution step produced
+            new_content, scripts = extract_scripts(new_content)
+
             # Write the evolved command
-            command_path = COMMANDS_DIR / f"{args.command}.md"
             command_path.write_text(new_content, encoding="utf-8")
             print(f"  Command updated ({evolve_usage['total_tokens']:,} tokens)")
+
+            # Write any helper scripts
+            if scripts:
+                SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+                for script_path, script_content in scripts.items():
+                    out = SCRIPTS_DIR / Path(script_path).name
+                    out.write_text(script_content, encoding="utf-8")
+                    print(f"  Script written: {out.relative_to(ROOT_DIR)}")
 
             # Track cumulative usage
             result["token_usage"]["evolution"] = evolve_usage
 
-            if current_total > best_score:
-                best_score = current_total
+    # Ensure the best version is the final state
+    if args.evolve and all_results and best_iter > 0:
+        final_score = all_results[-1]["scores"].get("total", 0)
+        if final_score < best_score:
+            command_path.write_text(best_content, encoding="utf-8")
+            print(f"\n  Final command set to iteration {best_iter} (best score: {best_score})")
 
     # Summary
     if len(all_results) > 1:
@@ -404,6 +603,8 @@ def main() -> None:
             max_possible = r["scores"].get("max_possible", "?")
             pct = f"{total / max_possible * 100:.0f}%" if isinstance(max_possible, (int, float)) and max_possible > 0 else "?"
             score_str = f"{total}/{max_possible} ({pct})"
+            if r["iteration"] == best_iter:
+                score_str += " *"
 
             exec_tokens = r["token_usage"]["execution"]["total_tokens"]
             score_tokens = r["token_usage"]["scoring"]["total_tokens"]
@@ -446,12 +647,15 @@ def main() -> None:
             row_line = "  ".join(r[k].rjust(col_widths[k]) for k in headers)
             print(f"    {row_line}")
 
-        # Score change
+        if best_iter > 0:
+            print(f"\n    Best iteration: {best_iter} (score: {best_score})")
+            print("    (* = best)")
+
+        # Score change (first -> best)
         first = all_results[0]["scores"].get("total", 0)
-        last = all_results[-1]["scores"].get("total", 0)
-        delta = last - first
+        delta = best_score - first
         sign = "+" if delta > 0 else ""
-        print(f"\n    Score change: {sign}{delta} ({first} -> {last})")
+        print(f"    Score change: {sign}{delta} ({first} -> {best_score})")
 
         # Execution token trend
         exec_list = [r["token_usage"]["execution"]["total_tokens"] for r in all_results]

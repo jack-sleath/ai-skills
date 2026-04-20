@@ -140,4 +140,12 @@ Create `FEATURE.md` in the project root using the structure below, filled with e
 
 ---
 
-After writing the file, tell the user where it was saved and what sections may still need manual updates (e.g. designs, detailed functional spec prose).
+After writing the file, copy its contents to the clipboard so the user can paste them straight into another tool (ticket tracker, Slack, Notion, etc.) without reopening the file:
+
+```bash
+cat FEATURE.md | python ~/.claude/scripts/copy_to_clipboard.py
+```
+
+If the clipboard command exits non-zero, print its stderr and note that the clipboard copy failed — but the file is still saved and is the source of truth.
+
+Tell the user where the file was saved, that the full contents are now on the clipboard (also available via Win+V history on Windows if clipboard history is enabled), and what sections may still need manual updates (e.g. designs, detailed functional spec prose).
