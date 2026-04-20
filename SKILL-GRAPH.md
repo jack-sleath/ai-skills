@@ -49,20 +49,4 @@ Utility
 /browser-task    (standalone — generates prompt for Claude web extension)
 /to-browser      (uses same output format as → /browser-task)
 /usage-text      (standalone — runs tools/read_usage.py via Selenium)
-
-
-Evolution
-─────────
-/create-criteria [command(s)]
-    └── reads → commands/<command>.md (to derive dimensions)
-    └── creates → evals/criteria/<command>.md (scoring rubric)
-    └── creates → evals/fixtures/<command>/ (sample inputs)
-
-/evolve [command(s)]
-    └── runs → evals/run.py (API-based eval runner)
-    └── reads → evals/criteria/<command>.md (scoring rubric)
-    └── reads → evals/fixtures/<command>/ (test inputs)
-    └── modifies → commands/<command>.md (evolved prompt)
-    └── runs → tools/read_usage.py (live quota check, same as /usage-text)
-    └── spawns → Agent (worktree, one per command in parallel batch mode)
 ```
