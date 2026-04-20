@@ -42,7 +42,8 @@ if (-not $ProfileOnly) {
             Write-Host "Created $rolesDest"
         }
 
-        $roleFiles = Get-ChildItem -Path $rolesSource -Include "*.md","*.json" -File
+        $roleFiles = Get-ChildItem -Path $rolesSource -Filter "*.md" -File
+        $roleFiles += Get-ChildItem -Path $rolesSource -Filter "*.json" -File
         foreach ($role in $roleFiles) {
             Copy-Item -Path $role.FullName -Destination $rolesDest -Force
             Write-Host "Copied (Role): $($role.Name)"
