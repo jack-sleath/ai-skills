@@ -1,7 +1,7 @@
 Create a staging branch off a target base branch, then merge the current feature branch into it.
 
 Arguments: $ARGUMENTS
-- Optional: the target base branch (e.g. `UAT/main`, `staging/main`). If not provided, prompt the user to select one interactively.
+- Optional: the target base branch (e.g. `staging/main`, `staging/main`). If not provided, prompt the user to select one interactively.
 
 **Steps:**
 
@@ -10,7 +10,7 @@ Arguments: $ARGUMENTS
 3. If no base branch was provided in $ARGUMENTS, run `/select-branch "Select base branch"` and use the returned branch name as the target base branch for all remaining steps.
 4. Get today's date in `YYYY-MM-DD` format.
 4. Build the new branch name:
-   - If the target base branch contains a `/` (e.g. `UAT/main`), extract the part before the `/` and use it as the folder prefix: `UAT/ABC-123-YYYY-MM-DD`.
+   - If the target base branch contains a `/` (e.g. `staging/main`), extract the part before the `/` and use it as the folder prefix: `staging/ABC-123-YYYY-MM-DD`.
    - If the target base branch has no `/` (e.g. `develop`), use the full target name joined with a hyphen: `develop-ABC-123-YYYY-MM-DD`.
 5. If a base branch was provided in $ARGUMENTS (skipping step 3), fetch the latest from origin: `git fetch origin`.
 6. Create the new branch off the target base: `git checkout -b <new-branch> origin/<target-base-branch>`.

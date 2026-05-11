@@ -35,8 +35,7 @@ Implementation
 
 Branch & Merge
 ──────────────
-/branch-uat ──────────┐
-/branch-develop ──────┴──► /branch-for
+/branch-develop ─────────► /branch-for
                            ├── /select-branch  (if no base given)
                            └── /merge-from
                                    └── /select-branch  (if no branch given)
