@@ -67,11 +67,6 @@ Utility
 /to-browser
     └── extracts instructions + context from the current conversation
     └── delegates to → /browser-task (skips its Phase 1 clarifying questions)
-/who-is-in-charge
-    └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
-    └── reads → ~/.claude/who-is-in-charge.json (handle list)
-    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts /rename line on clipboard)
-    └── hands off → Claude Code built-in /rename (user pastes, applies live)
 
 
 Roles
