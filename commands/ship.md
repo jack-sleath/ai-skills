@@ -6,10 +6,11 @@ Continuously implement milestones one at a time, raising a PR after each one bef
 2. Determine the main branch name — check for `main` or `master` (use `git remote show origin` or inspect `git branch -r` if unsure).
 3. If this is the first milestone, check out the main branch and pull the latest changes so `/milestone` branches from an up-to-date starting point.
 4. Follow all steps in the `/milestone` command to determine the correct parent branch, create the milestone branch, implement, test, commit, and push.
-5. Open a PR from the milestone branch into its parent branch (as determined by `/milestone` — the previous milestone's branch, or main for the first):
-    - First try `gh pr create` with a clear title and short body summarising what the milestone delivered.
-    - If `gh` is not available or fails, fall back to constructing a compare URL from the git remote: get the remote URL with `git remote get-url origin`, convert it to an HTTPS GitHub URL if needed, and output a link in the form `https://github.com/<owner>/<repo>/compare/<base>...<milestone-branch>` so the user can open the PR manually.
+5. Open a PR from the milestone branch into the main branch (as determined in step 2 — `main` or `master`), regardless of the milestone's parent branch:
+    - First try `gh pr create --base <main-branch>` with a clear title and short body summarising what the milestone delivered.
+    - If `gh` is not available or fails, fall back to constructing a compare URL from the git remote: get the remote URL with `git remote get-url origin`, convert it to an HTTPS GitHub URL if needed, and output a link in the form `https://github.com/<owner>/<repo>/compare/<main-branch>...<milestone-branch>` so the user can open the PR manually.
     - Output the PR URL (or compare URL) so the user can see it.
+    - Note: because milestone branches chain off each other, a PR opened before earlier milestones are merged will include the prior milestones' commits in its diff. That's expected — merge PRs in milestone order.
 6. Without waiting for the PR to be merged, immediately return to step 1 and begin the next milestone.
 
 **Rules:**
