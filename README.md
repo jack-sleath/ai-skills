@@ -14,7 +14,6 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Commit | `/commit` | Reviews current changes, groups related files into logical batches, and creates one commit per batch |
 | Branch For | `/branch-for <base-branch>` | Creates a dated staging branch off a target base, merges the current feature branch in, and opens a PR |
 | Select Branch | `/select-branch [prompt]` | Interactively picks a remote branch using fzf (or a numbered list fallback) and returns the selection |
-| Branch UAT | `/branch-uat` | Shortcut for `/branch-for UAT/main` — creates a `UAT/XXXXX-YYYY-MM-DD` branch and PR |
 | Branch Develop | `/branch-develop` | Shortcut for `/branch-for develop` — creates a `develop-XXXXX-YYYY-MM-DD` branch and PR |
 | Estimate Time | `/estimate-time [period]` | Analyses git history to estimate time spent. Accepts a date range, single date, or relative period (e.g. `3 months`, `30 days`) |
 | Ship | `/ship` | Implements all incomplete milestones in sequence — after each one, raises a PR to main and immediately starts the next |
@@ -29,8 +28,6 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Open PRs | `/open-prs` | Lists open PRs by others across the current org/user from the last 3 weeks — oldest first, with line change stats and links |
 | Review PR | `/review-pr` | Picks a PR from the `/open-prs` list, reviews it in the terminal, and optionally posts the review as a PR comment |
 | Review PRs | `/review-prs` | Reviews all open PRs in the current repo with fresh eyes, reports issues grouped by severity, and offers to fix them |
-| Cook Story | `/cook-story <notion-link> <iteration>` | Fetches a Notion spec, generates a Gherkin story card, and creates a Shortcut story in the given iteration |
-| Who Is In Charge | `/who-is-in-charge` | Picks a random handle (emoji + name) from `~/.claude/who-is-in-charge.json` and auto-copies a `/rename` line to your clipboard so you can paste it straight into the prompt — swaps the handle on repeat runs rather than stacking |
 
 ## Setup
 

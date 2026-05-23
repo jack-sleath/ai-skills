@@ -28,7 +28,6 @@ query($owner: String!, $cursor: String) {
         name
         defaultBranchRef { name }
         develop: ref(qualifiedName: "refs/heads/develop") { name }
-        uatMain: ref(qualifiedName: "refs/heads/UAT/main") { name }
         releaseBranches: refs(refPrefix: "refs/heads/release/", first: 20) {
           nodes { name }
         }
@@ -163,7 +162,6 @@ def main():
             continue
         default_branch = default_ref["name"]
         has_develop = repo.get("develop") is not None
-        has_uat = repo.get("uatMain") is not None
         release_nodes = repo.get("releaseBranches", {}).get("nodes") or []
 
         if has_develop:
@@ -173,12 +171,8 @@ def main():
             rb_name = f"release/{rb['name']}"
             comparisons.append((name, default_branch, rb_name, "release_ahead_main", None))
 
-        if has_develop and has_uat:
-            comparisons.append((name, "UAT/main", "develop", "develop_ahead_uat", None))
-
     main_ahead_develop = []
     release_ahead_main = []
-    develop_ahead_uat = []
 
     def run_compare(comp):
         repo_name, base, head, category, extra = comp
@@ -194,10 +188,8 @@ def main():
                     main_ahead_develop.append((repo_name, extra, n))
                 elif category == "release_ahead_main":
                     release_ahead_main.append((repo_name, head, n))
-                elif category == "develop_ahead_uat":
-                    develop_ahead_uat.append((repo_name, n))
 
-    total = len(main_ahead_develop) + len(release_ahead_main) + len(develop_ahead_uat)
+    total = len(main_ahead_develop) + len(release_ahead_main)
 
     if total == 0:
         print(f"**All branches are in sync across {owner}.**")
@@ -215,18 +207,10 @@ def main():
             print(f"- **{name}** `{rb}` — {n} commits ahead")
         print()
 
-    if develop_ahead_uat:
-        print("### develop ahead of UAT/main\n")
-        for name, n in sorted(develop_ahead_uat):
-            print(f"- **{name}** — {n} commits ahead")
-        print()
-
     drifted_repos = set()
     for name, *_ in main_ahead_develop:
         drifted_repos.add(name)
     for name, *_ in release_ahead_main:
-        drifted_repos.add(name)
-    for name, *_ in develop_ahead_uat:
         drifted_repos.add(name)
 
     print(f"**{len(drifted_repos)} repos with drift across {owner}**")

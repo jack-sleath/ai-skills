@@ -23,10 +23,6 @@ Documentation
 /stories ─── requires → MILESTONES.md
     └── generates per-milestone cards using same format as → /story
 /story       (standalone — no dependencies)
-/cook-story  <notion-link> <iteration>
-    └── uses same story-card format as → /story
-    └── fetches spec from → Notion (mcp__claude_ai_Notion__notion-fetch)
-    └── creates story in → Shortcut (mcp__claude_ai_Shortcut__stories-create)
 
 
 Implementation
@@ -39,8 +35,7 @@ Implementation
 
 Branch & Merge
 ──────────────
-/branch-uat ──────────┐
-/branch-develop ──────┴──► /branch-for
+/branch-develop ─────────► /branch-for
                            ├── /select-branch  (if no base given)
                            └── /merge-from
                                    └── /select-branch  (if no branch given)
@@ -72,11 +67,6 @@ Utility
 /to-browser
     └── extracts instructions + context from the current conversation
     └── delegates to → /browser-task (skips its Phase 1 clarifying questions)
-/who-is-in-charge
-    └── runs → ~/.claude/scripts/who_is_in_charge.py (computes target title)
-    └── reads → ~/.claude/who-is-in-charge.json (handle list)
-    └── runs → ~/.claude/scripts/copy_to_clipboard.py (puts /rename line on clipboard)
-    └── hands off → Claude Code built-in /rename (user pastes, applies live)
 
 
 Roles
