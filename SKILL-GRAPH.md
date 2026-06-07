@@ -67,6 +67,10 @@ Utility
 /to-browser
     └── extracts instructions + context from the current conversation
     └── delegates to → /browser-task (skips its Phase 1 clarifying questions)
+/init-memory
+    └── scaffolds → MEMORY.md + memory-wiki/ in the target project
+    └── edits → project CLAUDE.md (adds @MEMORY.md import)
+    └── standalone — no skill dependencies
 
 
 Roles

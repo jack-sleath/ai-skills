@@ -28,6 +28,7 @@ A portable collection of custom Claude Code skills, installable across multiple 
 | Open PRs | `/open-prs` | Lists open PRs by others across the current org/user from the last 3 weeks — oldest first, with line change stats and links |
 | Review PR | `/review-pr` | Picks a PR from the `/open-prs` list, reviews it in the terminal, and optionally posts the review as a PR comment |
 | Review PRs | `/review-prs` | Reviews all open PRs in the current repo with fresh eyes, reports issues grouped by severity, and offers to fix them |
+| Init Memory | `/init-memory` | Scaffolds a two-tier wiki memory system in the current project — `MEMORY.md` (always-loaded core memory + wiki index) imported via `CLAUDE.md`, with full pages in `memory-wiki/` recalled on demand and continuous capture of memory-worthy exchanges |
 
 ## Setup
 
